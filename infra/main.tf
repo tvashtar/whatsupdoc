@@ -96,8 +96,10 @@ resource "google_service_account" "github_actions" {
 resource "google_project_iam_member" "github_actions_roles" {
   for_each = toset([
     "roles/cloudbuild.builds.editor",
-    "roles/artifactregistry.writer",
-    "roles/run.developer"
+    "roles/artifactregistry.writer", 
+    "roles/run.developer",
+    "roles/serviceusage.serviceUsageAdmin",
+    "roles/storage.admin"
   ])
   project = var.project_id
   role    = each.key
@@ -127,43 +129,43 @@ resource "google_secret_manager_secret_iam_binding" "secret_access" {
 
 
 
-# --- Cloud Run ---
-resource "google_cloud_run_service" "chatbot_api" {
-  name     = "whatsupdoc-api"
-  location = var.region
+# --- Cloud Run (commented out until Docker image exists) ---
+# resource "google_cloud_run_service" "chatbot_api" {
+#   name     = "whatsupdoc-api"
+#   location = var.region
 
-  template {
-    spec {
-      containers {
-        image = var.docker_image_url
-        ports {
-          container_port = 8080
-        }
-        env {
-          name  = "GCS_BUCKET"
-          value = google_storage_bucket.rag_docs.name
-        }
-        env {
-          name  = "OPENAI_API_KEY_SECRET"
-          value = google_secret_manager_secret.openai_api_key.name
-        }
-      }
-    }
-  }
+#   template {
+#     spec {
+#       containers {
+#         image = var.docker_image_url
+#         ports {
+#           container_port = 8080
+#         }
+#         env {
+#           name  = "GCS_BUCKET"
+#           value = google_storage_bucket.rag_docs.name
+#         }
+#         env {
+#           name  = "OPENAI_API_KEY_SECRET"
+#           value = google_secret_manager_secret.openai_api_key.name
+#         }
+#       }
+#     }
+#   }
 
-  autogenerate_revision_name = true
-}
+#   autogenerate_revision_name = true
+# }
 
-resource "google_cloud_run_service_iam_binding" "public_invoker" {
-  location = var.region
-  service  = google_cloud_run_service.chatbot_api.name
-  role     = "roles/run.invoker"
-  members  = ["allUsers"]
-}
+# resource "google_cloud_run_service_iam_binding" "public_invoker" {
+#   location = var.region
+#   service  = google_cloud_run_service.chatbot_api.name
+#   role     = "roles/run.invoker"
+#   members  = ["allUsers"]
+# }
 
-output "chatbot_url" {
-  value = google_cloud_run_service.chatbot_api.status[0].url
-}
+# output "chatbot_url" {
+#   value = google_cloud_run_service.chatbot_api.status[0].url
+# }
 
 output "github_actions_sa_key" {
   value     = base64decode(google_service_account_key.github_actions_key.private_key)
