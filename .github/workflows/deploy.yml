@@ -34,7 +34,7 @@ jobs:
         run: |
           IMAGE_URI=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${IMAGE_NAME}:$GITHUB_SHA
           LATEST_URI=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${IMAGE_NAME}:latest
-          gcloud builds submit --tag $IMAGE_URI
+          gcloud builds submit src/ --tag $IMAGE_URI
           gcloud docker -- tag $IMAGE_URI $LATEST_URI
           gcloud docker -- push $LATEST_URI
           echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
