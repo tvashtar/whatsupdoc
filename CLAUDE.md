@@ -110,3 +110,58 @@ gcloud run deploy slack-rag-bot \
   --max-instances 10
 ```
 - remember to use uv and uv run where needed
+
+## Implementation Lessons Learned
+
+### 1. Slack Bolt Async/Sync Issues
+**Problem**: Mixing async functions with Slack Bolt event handlers causes "dispatch_failed" errors.
+**Solution**: Use synchronous event handlers and wrap async calls with `asyncio.run()`:
+```python
+# ❌ Don't do this
+@self.app.command("/ask")
+async def handle_ask_command(ack, respond, command, client):
+    await ack()
+    # async code here
+
+# ✅ Do this instead
+@self.app.command("/ask")
+def handle_ask_command(ack, respond, command, client):
+    ack()
+    asyncio.run(self._handle_async_logic(command, respond, client))
+```
+
+### 2. Socket Mode OAuth Configuration
+**Problem**: Having `SLACK_CLIENT_ID` and `SLACK_CLIENT_SECRET` in environment triggers OAuth mode, causing authorization failures.
+**Solution**: For Socket Mode, only use `SLACK_BOT_TOKEN` and `SLACK_APP_TOKEN`. Comment out OAuth variables in `.env`.
+
+### 3. Google Protobuf Data Structures
+**Problem**: Vertex AI Search returns protobuf `RepeatedComposite` and `MapComposite` objects that don't behave like regular Python lists/dicts.
+**Solution**: Convert and access properly:
+```python
+# Convert RepeatedComposite to list
+snippets_list = list(derived_data["snippets"])
+# Access MapComposite with bracket notation
+snippet_content = first_snippet["snippet"]
+```
+
+### 4. Slack Response Function Consistency
+**Problem**: Different Slack event types (`say`, `respond`, `client.chat_update`) have different async/sync behaviors.
+**Solution**: Don't await these functions when called from synchronous handlers. They return immediately in sync context.
+
+### 5. Vertex AI Search Configuration Paths
+**Problem**: Vertex AI Search has two different serving config path formats that may work differently.
+**Solution**: Implement fallback logic:
+```python
+# Try data store path first
+serving_config = f"projects/{project_id}/locations/{location}/dataStores/{data_store_id}/servingConfigs/default_config"
+# Fallback to app path
+app_serving_config = f"projects/{project_id}/locations/{location}/collections/default_collection/engines/{app_id}/servingConfigs/default_config"
+```
+
+### 6. Current Status & Next Steps
+**✅ Completed**: Functional Slack RAG bot with search capabilities
+**🔄 Missing**: True RAG generation (LLM integration for answers)
+**🐛 Known Issues**: 
+- Confidence scoring hardcoded at 50%
+- No conversation context tracking
+- Missing LLM integration for answer generation
