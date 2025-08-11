@@ -50,24 +50,14 @@ I need to implement the code in **Section 2** of the PRD:
    - Unit and integration tests
    - Monitoring and logging setup
 
-## Environment Variables Needed:
-```
-# GCP Settings
-PROJECT_ID=your-project-id
-LOCATION=global
-DATA_STORE_ID=your-datastore-id
-APP_ID=your-app-id
+## Environment Variables:
+**IMPORTANT**: The user has created a `.env` file in the project root with all required environment variables. Reference this file during implementation - it contains all the actual values I need for:
+- GCP credentials (PROJECT_ID, LOCATION, DATA_STORE_ID, APP_ID)
+- Slack tokens (SLACK_BOT_TOKEN, SLACK_SIGNING_SECRET, SLACK_APP_TOKEN) 
+- Feature configuration (USE_GROUNDED_GENERATION, MAX_RESULTS, RESPONSE_TIMEOUT)
+- Service account path (GOOGLE_APPLICATION_CREDENTIALS)
 
-# Slack Settings  
-SLACK_BOT_TOKEN=xoxb-...
-SLACK_SIGNING_SECRET=...
-SLACK_APP_TOKEN=xapp-...
-
-# Feature Flags
-USE_GROUNDED_GENERATION=True
-MAX_RESULTS=5
-RESPONSE_TIMEOUT=30
-```
+The `.env` file is already set up and ready to use with the actual credentials once the user completes the manual setup steps.
 
 ## User's Responsibilities:
 The user handles all GCP console setup (Section 1) and post-deployment tasks (Section 3):
