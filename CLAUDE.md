@@ -73,6 +73,24 @@ The user handles all GCP console setup (Section 1) and post-deployment tasks (Se
 - Clear source attribution for all answers
 - Graceful error handling
 
+## Development Commands:
+Use `uv` for all Python development tasks:
+
+```bash
+# Install dependencies
+uv sync
+
+# Run verification tests
+uv run tests/test_gcp_connection.py
+uv run tests/test_slack_connection.py
+
+# Run the bot (once implemented)
+uv run slack-rag-bot/app.py
+
+# Run tests (once implemented)
+uv run -m pytest tests/
+```
+
 ## Testing Commands:
 After implementation, I should run:
 - Unit tests for search functionality
@@ -91,3 +109,4 @@ gcloud run deploy slack-rag-bot \
   --min-instances 0 \
   --max-instances 10
 ```
+- remember to use uv and uv run where needed

@@ -224,6 +224,23 @@ RATE_LIMIT_WINDOW=60
 
 ## 🛠️ Development
 
+### Setup Environment
+
+1. **Install dependencies with uv**:
+```bash
+# Create virtual environment and install dependencies
+uv sync
+```
+
+2. **Verify your setup**:
+```bash
+# Test GCP connection
+uv run tests/test_gcp_connection.py
+
+# Test Slack connection
+uv run tests/test_slack_connection.py
+```
+
 Once your environment is set up, you'll be ready for the code implementation phase. The bot will be built with:
 
 - **Python 3.11+**
