@@ -1,0 +1,12 @@
+[project]
+name = "whatsupdoc"
+version = "0.1.0"
+description = "A Slack RAG chatbot using Vertex AI Search"
+requires-python = ">=3.11"
+dependencies = [
+    "python-dotenv>=1.0.0",
+    "google-auth>=2.23.0", 
+    "google-cloud-discoveryengine>=0.11.0",
+    "slack-sdk>=3.23.0",
+    "slack-bolt>=1.18.0",
+]

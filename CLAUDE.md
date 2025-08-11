@@ -53,11 +53,11 @@ I need to implement the code in **Section 2** of the PRD:
 ## Environment Variables:
 **IMPORTANT**: The user has created a `.env` file in the project root with all required environment variables. Reference this file during implementation - it contains all the actual values I need for:
 - GCP credentials (PROJECT_ID, LOCATION, DATA_STORE_ID, APP_ID)
-- Slack tokens (SLACK_BOT_TOKEN, SLACK_SIGNING_SECRET, SLACK_APP_TOKEN) 
+- Slack tokens (SLACK_BOT_TOKEN, SLACK_SIGNING_SECRET, SLACK_APP_TOKEN, SLACK_CLIENT_ID, SLACK_CLIENT_SECRET) 
 - Feature configuration (USE_GROUNDED_GENERATION, MAX_RESULTS, RESPONSE_TIMEOUT)
-- Service account path (GOOGLE_APPLICATION_CREDENTIALS)
+- Google Cloud auth: User is using Application Default Credentials (ADC) locally
 
-The `.env` file is already set up and ready to use with the actual credentials once the user completes the manual setup steps.
+The `.env` file is ready with all actual credentials populated. The user has completed all manual setup steps from Section 1 of the PRD.
 
 ## User's Responsibilities:
 The user handles all GCP console setup (Section 1) and post-deployment tasks (Section 3):

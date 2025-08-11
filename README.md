@@ -46,32 +46,53 @@ cp .env.example .env
 gcloud services enable aiplatform.googleapis.com
 gcloud services enable discoveryengine.googleapis.com
 gcloud services enable run.googleapis.com
+gcloud services enable storage.googleapis.com
 ```
 
 Or enable manually in the GCP Console:
 1. Go to "APIs & Services" → "Library"
 2. Enable:
    - Vertex AI API
-   - Discovery Engine API
+   - Discovery Engine API (powers Vertex AI Search)
    - Cloud Run API
+   - Cloud Storage API
+
+#### Create Cloud Storage Bucket for PDFs
+
+1. **Create Bucket**:
+   - Go to GCP Console → "Storage" → "Buckets" → "Create"
+   - **Name**: Pick unique name (e.g., `company-knowledge-base-docs`)
+   - **Location type**: Choose Region (same as planned Data Store location)
+   - **Storage class**: Standard
+   - Leave other settings as defaults → Click "Create"
+
+2. **Upload Your PDFs**:
+   - Open your new bucket
+   - Click "Upload Files" or "Upload Folder"
+   - Add your company PDF documents
+   - Wait for upload to complete
 
 #### Create Vertex AI Search Application
 
-1. **Navigate to Vertex AI Search**:
-   - Go to GCP Console → "Vertex AI" → "Search and Conversation"
-   - Click "Create App" → Choose "Search" type
-   - Select "Generic" content type
-   - Name it (e.g., "company-knowledge-base")
+1. **Navigate to Agent Builder**:
+   - Go to GCP Console → "Agent Builder" → "Vertex AI Search"
+   - Click "Create Data Store"
 
-2. **Create Data Store**:
-   - When prompted, create a new data store
-   - Note the **Data Store ID** from the details page
+2. **Configure Data Store**:
+   - **Content type**: Select "Unstructured"
+   - **Data source**: Choose "Cloud Storage"
+   - Select the bucket you created above
+   - Complete setup and wait for indexing (10-30 minutes for 1000 PDFs)
+   - **Note the Data Store ID** from the details page
 
-3. **Import Your PDFs**:
-   - In your data store, click "Import Data"
-   - Choose source: Cloud Storage or direct upload
-   - Upload your company documents (PDFs)
-   - Wait for indexing to complete (10-30 minutes for 1000 PDFs)
+3. **Create Search App**:
+   - Still in Agent Builder → Vertex AI Search
+   - Click "Create App"
+   - **Application type**: Select "Search"
+   - **Content type**: Choose "Generic" 
+   - **Link the Data Store** you created above
+   - Name your app (e.g., "company-knowledge-base")
+   - Save and **note the App ID** from details page
 
 4. **Get Required Values for .env**:
    ```bash
@@ -84,22 +105,39 @@ Or enable manually in the GCP Console:
 
 #### Create Service Account
 
+1. **Create Service Account**:
 ```bash
-# Create service account
 gcloud iam service-accounts create rag-bot-sa \
-  --display-name="RAG Bot Service Account"
+  --display-name="RAG Bot Service Account" \
+  --project=YOUR-PROJECT-ID
+```
 
-# Grant permissions
+2. **Grant Required Permissions**:
+```bash
+# Discovery Engine permissions for Vertex AI Search
 gcloud projects add-iam-policy-binding YOUR-PROJECT-ID \
   --member="serviceAccount:rag-bot-sa@YOUR-PROJECT-ID.iam.gserviceaccount.com" \
   --role="roles/discoveryengine.viewer"
 
-# Create and download key
-gcloud iam service-accounts keys create service-account.json \
-  --iam-account=rag-bot-sa@YOUR-PROJECT-ID.iam.gserviceaccount.com
+# Additional permission for search operations
+gcloud projects add-iam-policy-binding YOUR-PROJECT-ID \
+  --member="serviceAccount:rag-bot-sa@YOUR-PROJECT-ID.iam.gserviceaccount.com" \
+  --role="roles/aiplatform.user"
 ```
 
-Update your `.env` file:
+3. **Create and Download Key**:
+```bash
+gcloud iam service-accounts keys create service-account.json \
+  --iam-account=rag-bot-sa@YOUR-PROJECT-ID.iam.gserviceaccount.com \
+  --project=YOUR-PROJECT-ID
+```
+
+   Or create via GCP Console:
+   - Go to "IAM & Admin" → "Service Accounts"
+   - Click on your service account → "Keys" → "Add Key" → "JSON"
+   - Download and save as `service-account.json` in your project root
+
+4. **Update your `.env` file**:
 ```bash
 GOOGLE_APPLICATION_CREDENTIALS=./service-account.json
 ```
@@ -108,79 +146,81 @@ GOOGLE_APPLICATION_CREDENTIALS=./service-account.json
 
 #### Create Slack App
 
-1. Go to [https://api.slack.com/apps](https://api.slack.com/apps)
-2. Click "Create New App" → "From scratch"
-3. Name it (e.g., "Knowledge Bot")
-4. Select your workspace
+1. **Create New App**:
+   - Go to [https://api.slack.com/apps](https://api.slack.com/apps)
+   - Click "Create New App" → "From scratch"
+   - **App Name**: Enter name (e.g., "Knowledge Bot" or "What's Up Doc")
+   - **Workspace**: Select your workspace
+   - Click "Create App"
 
-#### Configure Bot Permissions
+#### Configure App Settings
 
-1. Go to "OAuth & Permissions"
-2. Add these **Bot Token Scopes**:
-   - `app_mentions:read` (respond to @mentions)
-   - `chat:write` (send messages)
-   - `commands` (slash commands)
-   - `channels:history` (read channel messages)
-   - `groups:history` (private channels)
-   - `im:history` (direct messages)
-   - `mpim:history` (group DMs)
+2. **Enable Socket Mode** (do this first):
+   - Go to "Socket Mode" → Toggle **Enable**
+   - When prompted, create an App-Level Token:
+     - **Token Name**: "socket-connection"
+     - **Scopes**: Add `connections:write`
+     - Click "Generate" and copy the token (starts with `xapp-`)
+   - Update your `.env`: `SLACK_APP_TOKEN=xapp-your-actual-token`
 
-#### Install App and Get Tokens
+3. **Configure Bot Token Scopes**:
+   - Go to "OAuth & Permissions"
+   - Scroll to "Scopes" → "Bot Token Scopes"
+   - Click "Add an OAuth Scope" and add these scopes:
+     - `app_mentions:read` (respond to @mentions)
+     - `chat:write` (send messages)
+     - `commands` (for slash commands)
+     - `channels:history` (read channel messages)
+     - `groups:history` (private channels)
+     - `im:history` (direct messages)
+     - `mpim:history` (group DMs)
 
-1. **Install to Workspace**:
+4. **Install App to Workspace**:
+   - Scroll up to "OAuth Tokens for Your Workspace"
    - Click "Install to Workspace"
-   - Authorize the permissions
-
-2. **Get Bot Token**:
+   - Click "Allow" to authorize the permissions
    - Copy the "Bot User OAuth Token" (starts with `xoxb-`)
    - Update your `.env`: `SLACK_BOT_TOKEN=xoxb-your-actual-token`
 
-3. **Get Signing Secret**:
+5. **Get App Credentials**:
    - Go to "Basic Information" → "App Credentials"
-   - Copy the "Signing Secret"
-   - Update your `.env`: `SLACK_SIGNING_SECRET=your-actual-secret`
+   - Copy the **Client ID** → Update your `.env`: `SLACK_CLIENT_ID=your-client-id`
+   - Copy the **Client Secret** → Update your `.env`: `SLACK_CLIENT_SECRET=your-client-secret`
+   - Copy the **Signing Secret** → Update your `.env`: `SLACK_SIGNING_SECRET=your-signing-secret`
 
-4. **Create App Token**:
-   - Go to "Basic Information" → "App-Level Tokens"
-   - Click "Generate Token and Scopes"
-   - Name it "socket-token" and add `connections:write` scope
-   - Copy the token (starts with `xapp-`)
-   - Update your `.env`: `SLACK_APP_TOKEN=xapp-your-actual-token`
+### 4. Verify Your Configuration
 
-#### Enable Socket Mode
-
-1. Go to "Socket Mode" → Toggle **Enable**
-2. This allows local development and Cloud Run deployment
-
-### 4. Final Environment Configuration
-
-Your `.env` file should now look like this:
+After completing the setup steps above, your `.env` file should look similar to this:
 
 ```bash
-# GCP Settings
-PROJECT_ID=my-company-project
+# GCP Settings (from your Vertex AI Search setup)
+PROJECT_ID=your-project-id
 LOCATION=global
-DATA_STORE_ID=my-datastore-id_1234567890
-APP_ID=my-app-id_0987654321
+DATA_STORE_ID=your-datastore-id_1234567890
+APP_ID=your-app-id
 
-# Slack Settings
-SLACK_BOT_TOKEN=xoxb-1234567890-1234567890-abcdefghijklmnopqrstuvwx
-SLACK_SIGNING_SECRET=a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
-SLACK_APP_TOKEN=xapp-1-A01234567-1234567890-abcdefghijklmnopqrstuvwxyz1234567890abcdef
+# Slack Settings (from your Slack app configuration)
+SLACK_BOT_TOKEN=xoxb-your-bot-token-here
+SLACK_SIGNING_SECRET=your-signing-secret-here
+SLACK_APP_TOKEN=xapp-your-app-token-here
+SLACK_CLIENT_ID=your-client-id-here
+SLACK_CLIENT_SECRET=your-client-secret-here
 
 # Feature Configuration
 USE_GROUNDED_GENERATION=True
 MAX_RESULTS=5
 RESPONSE_TIMEOUT=30
 
-# Service Account
+# Service Account (path to your downloaded JSON key)
 GOOGLE_APPLICATION_CREDENTIALS=./service-account.json
 
-# Bot Configuration
+# Bot Configuration  
 BOT_NAME=KnowledgeBot
 RATE_LIMIT_PER_USER=10
 RATE_LIMIT_WINDOW=60
 ```
+
+**✅ Setup Complete!** Once all values are populated, you're ready for code implementation.
 
 ## 🛠️ Development
 
