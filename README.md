@@ -102,9 +102,9 @@ This architecture **scales down to near-$0 cost** when not in use, making it ide
 
 ### 1. Environment Setup
 
-1. Create your environment file:
+1. Copy the example environment file:
 ```bash
-touch .env
+cp .env.example .env
 ```
 
 2. Follow the setup sections below to populate your `.env` file with the required values.

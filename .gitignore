@@ -220,3 +220,14 @@ scratch/
 # Development files (not needed in public repo)
 TODO.md
 .claude/
+
+# Sensitive files (security)
+service-account*.json
+*.key
+*.pem
+.env.local
+.env.production
+
+# Deployment artifacts
+deploy.log
+gcloud.log
