@@ -95,6 +95,7 @@ Or enable manually in the GCP Console:
      - Chunk size: 512 tokens (recommended)
      - Chunk overlap: 100 tokens
    - Start import and wait for completion (10-30 minutes for 1000 PDFs)
+   - **NOTE**: To add new documents later, return here and repeat the import process
 
 4. **Get Required Values for .env**:
    ```bash
@@ -347,7 +348,18 @@ gcloud artifacts repositories create cloud-run-source-deploy \
 
 ### Deploy to Cloud Run
 
-1. **Build and deploy**:
+1. **Easy deployment** (recommended):
+```bash
+# Make sure your .env file is configured with all required values
+./deploy.sh
+```
+
+The deployment script will:
+- Read all environment variables from your `.env` file
+- Deploy to Cloud Run using those variables
+- Display the service URL when complete
+
+2. **Manual deployment** (alternative):
 ```bash
 gcloud run deploy whatsupdoc-slack-bot \
   --source . \
@@ -364,7 +376,7 @@ gcloud run deploy whatsupdoc-slack-bot \
   --quiet
 ```
 
-2. **Configure Slack app for Cloud Run** (IMPORTANT):
+3. **Configure Slack app for Cloud Run** (IMPORTANT):
    - **Disable Socket Mode**: Settings → Socket Mode → Toggle OFF
    - **Configure Event Subscriptions**:
      - Enable Events
@@ -375,9 +387,9 @@ gcloud run deploy whatsupdoc-slack-bot \
    - **Update Interactivity & Shortcuts** (if used):
      - Request URL: `https://YOUR-SERVICE-URL.run.app/slack/events`
 
-3. **Monitor logs**:
+4. **Monitor logs**:
 ```bash
-gcloud run logs read --service slack-rag-bot --region us-central1
+gcloud run logs read --service whatsupdoc-slack-bot --region us-central1
 ```
 
 ## 🔒 Security
