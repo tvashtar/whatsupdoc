@@ -17,7 +17,7 @@ class RAGResponse:
 
 class GeminiRAGService:
     def __init__(self, project_id: str, location: str = "us-central1", 
-                 model: str = "gemini-2.0-flash-001", api_key: Optional[str] = None,
+                 model: str = "gemini-2.5-flash-lite", api_key: Optional[str] = None,
                  use_vertex_ai: bool = True, temperature: float = 0.3):
         self.project_id = project_id
         self.location = location
@@ -85,10 +85,10 @@ class GeminiRAGService:
             
             context = "".join(context_parts)
             
-            # Debug: Show what's being passed to Gemini
-            print(f"🤖 Passing {len(used_sources)} sources to Gemini (total context: {len(context):,} chars)")
+            # Log what's being passed to Gemini for debugging
+            logging.debug(f"Passing {len(used_sources)} sources to Gemini (total context: {len(context):,} chars)")
             for i, source in enumerate(used_sources, 1):
-                print(f"  Source {i}: {len(source.snippet):,} chars from {source.title[:50]}...")
+                logging.debug(f"  Source {i}: {len(source.snippet):,} chars from {source.title[:50]}...")
             
             # Calculate overall confidence from sources
             overall_confidence = sum(result.confidence_score for result in used_sources) / len(used_sources)

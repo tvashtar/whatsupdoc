@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 
-import os
 import asyncio
 import logging
+import threading
 from typing import List, Dict
-from dotenv import load_dotenv
 
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
@@ -13,8 +12,6 @@ import structlog
 from .config import Config
 from .vertex_rag_client import VertexRAGClient, SearchResult
 from .gemini_rag import GeminiRAGService, RAGResponse
-
-# Environment variables loaded in app.py
 
 # Configure structured logging
 structlog.configure(
@@ -49,9 +46,9 @@ class ResearchPaperBot:
             logger.error("Configuration errors", errors=errors)
             raise ValueError(f"Configuration errors: {', '.join(errors)}")
         
-        # Debug token format
-        print(f"Bot token starts with: {self.config.slack_bot_token[:10]}...")
-        print(f"App token starts with: {self.config.slack_app_token[:10]}...")
+        # Log token format for debugging
+        logger.debug(f"Bot token starts with: {self.config.slack_bot_token[:10]}...")
+        logger.debug(f"App token starts with: {self.config.slack_app_token[:10]}...")
         
         # Initialize Slack app with explicit token and disable OAuth for Socket Mode
         self.app = App(
@@ -90,27 +87,55 @@ class ResearchPaperBot:
         # Handle @mentions
         @self.app.event("app_mention")
         def handle_mention(event, say, client):
-            print(f"📢 Received mention: {event.get('text', '')}")
-            asyncio.run(self._handle_query(event, say, client, event["text"]))
+            logger.info(f"Received mention: {event.get('text', '')}")
+            # Create new event loop for the async operation
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                loop.run_until_complete(self._handle_query(event, say, client, event["text"]))
+            finally:
+                loop.close()
         
-        # Handle slash commands
+        # Handle slash commands - acknowledge immediately then process
         @self.app.command("/ask")
         def handle_ask_command(ack, respond, command, client):
-            print(f"⚡ Received slash command: {command.get('text', '')}")
-            try:
-                ack()
-                asyncio.run(self._handle_query(command, respond, client, command["text"]))
-            except Exception as e:
-                print(f"❌ Error in slash command handler: {e}")
-                respond({"text": f"❌ Sorry, I encountered an error: {str(e)}"})
+            logger.info(f"Received slash command: {command.get('text', '')}")
+            # Acknowledge immediately to prevent dispatch_failed
+            ack()
+            
+            # Run async work in a new thread to avoid blocking
+            def run_async_query():
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    loop.run_until_complete(self._handle_query(command, respond, client, command["text"]))
+                except Exception as e:
+                    logger.error(f"Error in slash command handler: {e}")
+                    try:
+                        respond({"text": f"❌ Sorry, I encountered an error: {str(e)}"})
+                    except Exception:
+                        pass  # Respond might fail if connection is closed
+                finally:
+                    loop.close()
+            
+            # Start the async work in a background thread
+            thread = threading.Thread(target=run_async_query)
+            thread.daemon = True
+            thread.start()
         
         # Handle DMs
         @self.app.message("")
         def handle_dm(message, say, client):
-            print(f"💬 Received message: {message.get('text', '')} in {message.get('channel_type', 'unknown')}")
+            logger.info(f"Received message: {message.get('text', '')} in {message.get('channel_type', 'unknown')}")
             # Only respond to DMs (direct messages)
             if message.get("channel_type") == "im":
-                asyncio.run(self._handle_query(message, say, client, message["text"]))
+                # Create new event loop for the async operation
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    loop.run_until_complete(self._handle_query(message, say, client, message["text"]))
+                finally:
+                    loop.close()
     
     async def _handle_query(self, event_data, respond_func, client, query_text: str):
         user_id = event_data.get("user") or event_data.get("user_id")
@@ -141,23 +166,23 @@ class ResearchPaperBot:
         
         try:
             # Search for relevant papers
-            print(f"🔍 Searching for: '{clean_query}'")
+            logger.info(f"Searching for: '{clean_query}'")
             results = await self.search_client.search(
                 query=clean_query,
                 max_results=self.config.max_results,
                 use_grounded_generation=self.config.use_grounded_generation
             )
             
-            # Debug: Show chunk information
+            # Log chunk information for debugging
             total_chunk_length = sum(len(result.snippet) for result in results)
-            print(f"📊 Search returned {len(results)} results")
-            print(f"📏 Total length of retrieved chunks: {total_chunk_length:,} characters")
+            logger.debug(f"Search returned {len(results)} results")
+            logger.debug(f"Total length of retrieved chunks: {total_chunk_length:,} characters")
             for i, result in enumerate(results, 1):
-                print(f"  Chunk {i}: {len(result.snippet):,} chars (confidence: {result.confidence_score:.1%})")
+                logger.debug(f"  Chunk {i}: {len(result.snippet):,} chars (confidence: {result.confidence_score:.1%})")
             
             # Generate comprehensive answer using RAG if enabled and results found
             if results and self.rag_service:
-                print("🤖 Generating comprehensive answer with Gemini...")
+                logger.info("Generating comprehensive answer with Gemini...")
                 rag_response = await self.rag_service.generate_answer(
                     query=clean_query,
                     search_results=results,
@@ -199,13 +224,16 @@ class ResearchPaperBot:
                     })
             else:
                 # No results found
-                client.chat_update(
-                    channel=channel_id,
-                    ts=loading_response.get('ts') if hasattr(loading_response, 'get') else None,
-                    text=f"🤔 No relevant documents found for: `{clean_query}`. Try rephrasing your question or using different keywords.",
-                ) if hasattr(loading_response, 'get') else respond_func({
-                    "text": f"🤔 No relevant documents found for: `{clean_query}`. Try rephrasing your question or using different keywords."
-                })
+                no_results_message = f"🤔 No relevant documents found for: `{clean_query}`. Try rephrasing your question or using different keywords."
+                
+                if hasattr(loading_response, 'get') and loading_response.get('ts'):
+                    client.chat_update(
+                        channel=channel_id,
+                        ts=loading_response['ts'],
+                        text=no_results_message
+                    )
+                else:
+                    respond_func({"text": no_results_message})
                 
         except Exception as e:
             logger.error("Search failed", error=str(e), query=clean_query)
@@ -449,51 +477,45 @@ class ResearchPaperBot:
     
     def start(self):
         # Test connection to Vertex AI
-        print("🔍 Testing Vertex AI Search connection...")
+        logger.info("Testing Vertex AI RAG Engine connection...")
         try:
             if not self.search_client.test_connection():
-                print("❌ Failed to connect to Vertex AI Search")
-                logger.error("Failed to connect to Vertex AI Search")
-                raise ConnectionError("Cannot connect to Vertex AI Search")
-            print("✅ Vertex AI Search connection successful")
+                logger.error("Failed to connect to Vertex AI RAG Engine")
+                raise ConnectionError("Cannot connect to Vertex AI RAG Engine")
+            logger.info("Vertex AI RAG Engine connection successful")
         except Exception as e:
-            print(f"❌ Vertex AI Search connection failed: {e}")
+            logger.error(f"Vertex AI RAG Engine connection failed: {e}")
             raise
         
         # Test Gemini connection if enabled
         if self.rag_service:
-            print("🤖 Testing Gemini connection...")
+            logger.info("Testing Gemini connection...")
             try:
                 if not self.rag_service.test_connection():
-                    print("⚠️ Warning: Gemini connection failed - falling back to search-only mode")
                     logger.warning("Gemini connection failed, using search-only mode")
                     self.rag_service = None
                 else:
-                    print("✅ Gemini connection successful - RAG generation enabled")
+                    logger.info("Gemini connection successful - RAG generation enabled")
             except Exception as e:
-                print(f"⚠️ Warning: Gemini connection failed: {e} - falling back to search-only mode")
-                logger.warning("Gemini connection failed", error=str(e))
+                logger.warning(f"Gemini connection failed: {e} - falling back to search-only mode")
                 self.rag_service = None
         
-        print(f"🤖 Starting ResearchPaperBot: {self.config.bot_name}")
-        logger.info("Starting ResearchPaperBot", bot_name=self.config.bot_name)
+        logger.info(f"Starting ResearchPaperBot: {self.config.bot_name}")
         
         # Start the bot
-        print("🔗 Connecting to Slack...")
+        logger.info("Connecting to Slack...")
         try:
             handler = SocketModeHandler(self.app, self.config.slack_app_token)
-            print("✅ Socket Mode handler created successfully")
-            print("🚀 Bot is starting...")
-            print("✅ whatsupdoc research paper bot is running!")
-            print("💬 Ready to answer questions about research papers!")
-            print("   Try: @whatsupdoc what are the main findings about text analysis?")
-            print("   Or:  /ask machine learning methodology")
-            print("   Or:  DM me directly")
-            print()
+            logger.info("Socket Mode handler created successfully")
+            logger.info("Bot is starting...")
+            logger.info("whatsupdoc research paper bot is running!")
+            logger.info("Ready to answer questions about research papers!")
+            logger.info("   Try: @whatsupdoc what are the main findings about text analysis?")
+            logger.info("   Or:  /ask machine learning methodology")
+            logger.info("   Or:  DM me directly")
             handler.start()
         except Exception as e:
-            print(f"❌ Slack connection failed: {e}")
-            logger.error("Slack connection failed", error=str(e))
+            logger.error(f"Slack connection failed: {e}")
             raise
 
 

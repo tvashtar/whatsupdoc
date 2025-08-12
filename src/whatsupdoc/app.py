@@ -6,7 +6,6 @@ This module provides the main entry point for the whatsupdoc Slack bot.
 It handles initialization, environment setup, and bot startup.
 """
 
-import os
 from dotenv import load_dotenv
 from whatsupdoc.slack_bot import ResearchPaperBot
 

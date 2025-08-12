@@ -13,8 +13,6 @@ class Config:
         self.slack_bot_token = os.getenv("SLACK_BOT_TOKEN", "")
         self.slack_signing_secret = os.getenv("SLACK_SIGNING_SECRET", "")
         self.slack_app_token = os.getenv("SLACK_APP_TOKEN", "")
-        self.slack_client_id = os.getenv("SLACK_CLIENT_ID", "")
-        self.slack_client_secret = os.getenv("SLACK_CLIENT_SECRET", "")
         
         # Feature Configuration
         self.use_grounded_generation = os.getenv("USE_GROUNDED_GENERATION", "True").lower() == "true"

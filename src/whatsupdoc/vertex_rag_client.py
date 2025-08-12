@@ -2,8 +2,6 @@ import logging
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 import asyncio
-import json
-from google.cloud import aiplatform_v1beta1 as aiplatform
 from google.auth import default
 
 

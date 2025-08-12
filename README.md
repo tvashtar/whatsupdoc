@@ -1,10 +1,10 @@
 # What's Up Doc? 🤖
 
-A Slack RAG (Retrieval-Augmented Generation) chatbot that allows employees to query company knowledge base using natural language. Built with Google Cloud's Vertex AI Search and deployed on Cloud Run.
+A Slack RAG (Retrieval-Augmented Generation) chatbot that allows employees to query company knowledge base using natural language. Built with Google Cloud's Vertex AI RAG Engine and deployed on Cloud Run.
 
 ## 🏗️ Architecture
 
-- **Knowledge Base**: Vertex AI Search (handles PDF ingestion, embedding, and retrieval)
+- **Knowledge Base**: Vertex AI RAG Engine (handles document ingestion, chunking, embedding, and retrieval)
 - **Interface**: Slack bot responding to @mentions, slash commands, and DMs
 - **Hosting**: Google Cloud Run (serverless, auto-scaling)
 - **Language**: Python with Slack Bolt framework
@@ -72,35 +72,33 @@ Or enable manually in the GCP Console:
    - Add your company PDF documents
    - Wait for upload to complete
 
-#### Create Vertex AI Search Application
+#### Create Vertex AI RAG Engine Corpus
 
-1. **Navigate to Agent Builder**:
-   - Go to GCP Console → "Agent Builder" → "Vertex AI Search"
-   - Click "Create Data Store"
+1. **Navigate to Vertex AI**:
+   - Go to GCP Console → "Vertex AI" → "RAG Engine"
+   - Click "Create RAG Corpus"
 
-2. **Configure Data Store**:
-   - **Content type**: Select "Unstructured"
+2. **Configure RAG Corpus**:
+   - **Name**: Enter a name (e.g., "whatsupdoc")
+   - **Display Name**: Enter a display name
+   - **Description**: Add a description
+   - Click "Create"
+
+3. **Import Documents**:
+   - Once corpus is created, click "Import Files"
    - **Data source**: Choose "Cloud Storage"
-   - Select the bucket you created above
-   - Complete setup and wait for indexing (10-30 minutes for 1000 PDFs)
-   - **Note the Data Store ID** from the details page
-
-3. **Create Search App**:
-   - Still in Agent Builder → Vertex AI Search
-   - Click "Create App"
-   - **Application type**: Select "Search"
-   - **Content type**: Choose "Generic" 
-   - **Link the Data Store** you created above
-   - Name your app (e.g., "company-knowledge-base")
-   - Save and **note the App ID** from details page
+   - Select the bucket with your PDFs
+   - Configure chunking settings:
+     - Chunk size: 512 tokens (recommended)
+     - Chunk overlap: 100 tokens
+   - Start import and wait for completion (10-30 minutes for 1000 PDFs)
 
 4. **Get Required Values for .env**:
    ```bash
    # Update these in your .env file:
    PROJECT_ID=your-actual-project-id           # From GCP Console
-   LOCATION=global                            # Or your chosen region
-   DATA_STORE_ID=your-actual-datastore-id     # From data store details page
-   APP_ID=your-actual-app-id                  # From app details page
+   LOCATION=us-central1                        # Or your chosen region
+   RAG_CORPUS_ID=projects/PROJECT_ID/locations/LOCATION/ragCorpora/CORPUS_ID  # Full corpus resource name
    ```
 
 #### Create Service Account
@@ -114,15 +112,15 @@ gcloud iam service-accounts create rag-bot-sa \
 
 2. **Grant Required Permissions**:
 ```bash
-# Discovery Engine permissions for Vertex AI Search
-gcloud projects add-iam-policy-binding YOUR-PROJECT-ID \
-  --member="serviceAccount:rag-bot-sa@YOUR-PROJECT-ID.iam.gserviceaccount.com" \
-  --role="roles/discoveryengine.viewer"
-
-# Additional permission for search operations
+# Vertex AI permissions for RAG Engine
 gcloud projects add-iam-policy-binding YOUR-PROJECT-ID \
   --member="serviceAccount:rag-bot-sa@YOUR-PROJECT-ID.iam.gserviceaccount.com" \
   --role="roles/aiplatform.user"
+
+# Additional permission for RAG operations
+gcloud projects add-iam-policy-binding YOUR-PROJECT-ID \
+  --member="serviceAccount:rag-bot-sa@YOUR-PROJECT-ID.iam.gserviceaccount.com" \
+  --role="roles/aiplatform.viewer"
 ```
 
 3. **Create and Download Key**:
@@ -184,8 +182,6 @@ GOOGLE_APPLICATION_CREDENTIALS=./service-account.json
 
 5. **Get App Credentials**:
    - Go to "Basic Information" → "App Credentials"
-   - Copy the **Client ID** → Update your `.env`: `SLACK_CLIENT_ID=your-client-id`
-   - Copy the **Client Secret** → Update your `.env`: `SLACK_CLIENT_SECRET=your-client-secret`
    - Copy the **Signing Secret** → Update your `.env`: `SLACK_SIGNING_SECRET=your-signing-secret`
 
 ### 4. Verify Your Configuration
@@ -193,18 +189,24 @@ GOOGLE_APPLICATION_CREDENTIALS=./service-account.json
 After completing the setup steps above, your `.env` file should look similar to this:
 
 ```bash
-# GCP Settings (from your Vertex AI Search setup)
+# GCP Settings (from your Vertex AI RAG Engine setup)
 PROJECT_ID=your-project-id
-LOCATION=global
-DATA_STORE_ID=your-datastore-id_1234567890
-APP_ID=your-app-id
+LOCATION=us-central1
+RAG_CORPUS_ID=projects/PROJECT_ID/locations/LOCATION/ragCorpora/CORPUS_ID
 
 # Slack Settings (from your Slack app configuration)
 SLACK_BOT_TOKEN=xoxb-your-bot-token-here
 SLACK_SIGNING_SECRET=your-signing-secret-here
 SLACK_APP_TOKEN=xapp-your-app-token-here
-SLACK_CLIENT_ID=your-client-id-here
-SLACK_CLIENT_SECRET=your-client-secret-here
+
+# Gemini Settings
+GEMINI_MODEL=gemini-2.5-flash-lite
+USE_VERTEX_AI=True
+
+# RAG Generation Settings
+ENABLE_RAG_GENERATION=True
+MAX_CONTEXT_LENGTH=100000
+ANSWER_TEMPERATURE=0.3
 
 # Feature Configuration
 USE_GROUNDED_GENERATION=True
@@ -234,18 +236,21 @@ uv sync
 
 2. **Verify your setup**:
 ```bash
-# Test GCP connection
-uv run tests/test_gcp_connection.py
+# Run all tests
+uv run tests/run_all_tests.py
 
-# Test Slack connection
+# Or run individual tests:
+uv run tests/test_rag_engine_connection.py
+uv run tests/test_gemini_integration.py
 uv run tests/test_slack_connection.py
 ```
 
 Once your environment is set up, you'll be ready for the code implementation phase. The bot will be built with:
 
 - **Python 3.11+**
-- **Slack Bolt Framework** for Slack integration
-- **Google Cloud Vertex AI Search** for document retrieval
+- **Slack Bolt Framework** for Slack integration  
+- **Google Cloud Vertex AI RAG Engine** for chunk-based document retrieval
+- **Gemini 2.5 Flash Lite** for RAG-based answer generation
 - **Cloud Run** for serverless deployment
 
 ## 📚 Usage Examples
@@ -284,7 +289,28 @@ All configuration is handled through environment variables in your `.env` file:
 
 ## 🚀 Deployment
 
-Deployment instructions will be added once the code implementation is complete.
+### Deploy to Cloud Run
+
+1. **Build and deploy**:
+```bash
+gcloud run deploy slack-rag-bot \
+  --source . \
+  --region us-central1 \
+  --service-account rag-bot-sa@PROJECT-ID.iam.gserviceaccount.com \
+  --set-env-vars-from-file .env.production \
+  --min-instances 0 \
+  --max-instances 10
+```
+
+2. **Update Slack app configuration**:
+   - Get the Cloud Run service URL from the deployment output
+   - Update your Slack app's Event Subscriptions URL
+   - Update your Slack app's Slash Commands URL
+
+3. **Monitor logs**:
+```bash
+gcloud run logs read --service slack-rag-bot --region us-central1
+```
 
 ## 🔒 Security
 
