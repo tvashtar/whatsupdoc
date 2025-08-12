@@ -19,17 +19,16 @@ A production-ready Slack RAG (Retrieval-Augmented Generation) chatbot that allow
 │  Rich responses │    │                  │    │  • Search       │
 │  w/ sources     │    │  Python 3.11     │    │                 │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
-                                │
-                                │
-                                ▼
-                       ┌─────────────────┐
-                       │     Gemini      │
-                       │  2.5 Flash Lite │
-                       │                 │
-                       │ • RAG synthesis │
-                       │ • Answer gen.   │
-                       │ • Citations     │
-                       └─────────────────┘
+                              │    ▲        
+                              ▼    │       
+                       ┌──────────────────┐ 
+                       │     Gemini       │ 
+                       │  2.5 Flash Lite  │
+                       │                  │
+                       │  • RAG synthesis │
+                       │  • Answer gen.   │
+                       │  • Citations     │
+                       └──────────────────┘
 ```
 
 **Components:**
