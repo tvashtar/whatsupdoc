@@ -30,3 +30,10 @@ dev-dependencies = [
     "pytest-asyncio>=0.21.0",
     "requests-mock>=1.11.0",
 ]
+
+[project.optional-dependencies]
+cloud-functions = [
+    "functions-framework>=3.5.0",
+    "google-cloud-aiplatform>=1.108.0",
+    "cloudevents>=1.11.0",
+]
