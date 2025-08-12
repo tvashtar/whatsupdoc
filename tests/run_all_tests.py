@@ -36,7 +36,7 @@ def main():
     test_files = [
         "test_package_imports.py",
         "test_gcp_connection.py", 
-        "test_vertex_search_integration.py",
+        "test_rag_engine_connection.py",
         "test_gemini_integration.py",
         "test_slack_connection.py"
     ]

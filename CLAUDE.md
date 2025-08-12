@@ -1,10 +1,11 @@
 # Project Context: Slack RAG Chatbot
 
 ## Project Overview
-This is a Slack bot that allows employees to query a company knowledge base (1000 PDFs) using natural language. The bot uses Google Cloud's Vertex AI Search for RAG capabilities and is deployed on Cloud Run.
+This is a Slack bot that allows employees to query a company knowledge base (1000 PDFs) using natural language. The bot uses Google Cloud's Vertex AI RAG Engine for proper chunk-based retrieval and Gemini for answer generation, deployed on Cloud Run.
 
 ## Architecture
-- **Knowledge Base**: Vertex AI Search (handles ingestion, embedding, retrieval)
+- **Knowledge Base**: Vertex AI RAG Engine (handles document ingestion, chunking, embedding, and retrieval)
+- **Answer Generation**: Gemini API for RAG-based response generation
 - **Interface**: Slack bot responding to mentions and slash commands  
 - **Hosting**: Cloud Run (serverless, auto-scaling)
 - **Language**: Python with Slack Bolt framework
@@ -12,14 +13,15 @@ This is a Slack bot that allows employees to query a company knowledge base (100
 ## My Implementation Scope
 I need to implement the code in **Section 2** of the PRD:
 
-### Core Files to Create:
-- `slack-rag-bot/app.py` - Main Slack bot application
-- `slack-rag-bot/vertex_search.py` - Vertex AI Search integration
-- `slack-rag-bot/config.py` - Configuration management
-- `slack-rag-bot/requirements.txt` - Python dependencies
-- `slack-rag-bot/Dockerfile` - For Cloud Run deployment
-- `slack-rag-bot/.env.example` - Example environment variables
-- `slack-rag-bot/README.md` - Setup and deployment instructions
+### Core Files Implemented:
+- `src/whatsupdoc/app.py` - Main Slack bot application
+- `src/whatsupdoc/vertex_rag_client.py` - Vertex AI RAG Engine integration  
+- `src/whatsupdoc/gemini_rag.py` - Gemini RAG answer generation
+- `src/whatsupdoc/config.py` - Configuration management
+- `pyproject.toml` - Python dependencies and project configuration
+- `Dockerfile` - For Cloud Run deployment
+- `.env` - Environment variables (configured)
+- `tests/` - Comprehensive test suite
 
 ### Key Features to Implement:
 1. **Slack Bot Features**:
@@ -30,12 +32,12 @@ I need to implement the code in **Section 2** of the PRD:
    - Loading messages for better UX
    - Error handling with user-friendly messages
 
-2. **Vertex AI Search Integration**:
+2. **Vertex AI RAG Engine Integration**:
    - Natural language query processing
-   - API calls to Vertex AI Search
-   - Result formatting with snippets and sources
-   - Confidence scoring
-   - Pagination support
+   - Proper chunk-based document retrieval
+   - Full document context (not just snippets)
+   - Confidence scoring based on relevance
+   - Efficient embedding-based search
 
 3. **Advanced Features**:
    - Query preprocessing and optimization
@@ -51,20 +53,20 @@ I need to implement the code in **Section 2** of the PRD:
    - Monitoring and logging setup
 
 ## Environment Variables:
-**IMPORTANT**: The user has created a `.env` file in the project root with all required environment variables. Reference this file during implementation - it contains all the actual values I need for:
-- GCP credentials (PROJECT_ID, LOCATION, DATA_STORE_ID, APP_ID)
-- Slack tokens (SLACK_BOT_TOKEN, SLACK_SIGNING_SECRET, SLACK_APP_TOKEN, SLACK_CLIENT_ID, SLACK_CLIENT_SECRET) 
-- Feature configuration (USE_GROUNDED_GENERATION, MAX_RESULTS, RESPONSE_TIMEOUT)
-- Google Cloud auth: User is using Application Default Credentials (ADC) locally
+**CONFIGURED**: The `.env` file contains all required environment variables:
+- **GCP credentials**: PROJECT_ID, LOCATION, RAG_CORPUS_ID
+- **Slack tokens**: SLACK_BOT_TOKEN, SLACK_SIGNING_SECRET, SLACK_APP_TOKEN
+- **RAG configuration**: ENABLE_RAG_GENERATION, MAX_CONTEXT_LENGTH, ANSWER_TEMPERATURE
+- **Gemini settings**: GEMINI_MODEL, USE_VERTEX_AI
+- **Feature settings**: MAX_RESULTS, RESPONSE_TIMEOUT
+- **Google Cloud auth**: Using Application Default Credentials (ADC)
 
-The `.env` file is ready with all actual credentials populated. The user has completed all manual setup steps from Section 1 of the PRD.
-
-## User's Responsibilities:
-The user handles all GCP console setup (Section 1) and post-deployment tasks (Section 3):
-- Setting up Vertex AI Search with PDF ingestion
-- Creating Slack app and configuring permissions
-- Setting up service accounts and IAM
-- Post-deployment: adding bot to channels, monitoring
+## Setup Status:
+**COMPLETED**: User has successfully:
+- ✅ Created Vertex AI RAG Engine corpus with 1000 PDFs
+- ✅ Configured Slack app with proper permissions
+- ✅ Set up all required environment variables
+- ✅ Tested RAG Engine functionality in AI Studio
 
 ## Success Criteria:
 - Bot responds to queries within 5 seconds
@@ -81,23 +83,24 @@ Use `uv` for all Python development tasks:
 uv sync
 
 # Run verification tests
-uv run tests/test_gcp_connection.py
+uv run tests/test_rag_engine_connection.py
+uv run tests/test_gemini_integration.py
 uv run tests/test_slack_connection.py
 
-# Run the bot (once implemented)
-uv run slack-rag-bot/app.py
+# Run all tests
+uv run tests/run_all_tests.py
 
-# Run tests (once implemented)
-uv run -m pytest tests/
+# Run the bot
+uv run whatsupdoc
 ```
 
-## Testing Commands:
-After implementation, I should run:
-- Unit tests for search functionality
-- Integration tests with test data store
-- Slack message formatting tests
-- Error handling scenarios
-- Rate limiting tests
+## Testing Status:
+✅ **IMPLEMENTED**: Complete test suite covering:
+- RAG Engine connection and search functionality
+- Gemini integration and response generation
+- Slack bot configuration and API connection
+- Package imports and dependencies
+- GCP authentication and access
 
 ## Deployment Commands:
 ```bash
@@ -158,10 +161,25 @@ serving_config = f"projects/{project_id}/locations/{location}/dataStores/{data_s
 app_serving_config = f"projects/{project_id}/locations/{location}/collections/default_collection/engines/{app_id}/servingConfigs/default_config"
 ```
 
-### 6. Current Status & Next Steps
-**✅ Completed**: Functional Slack RAG bot with search capabilities
-**🔄 Missing**: True RAG generation (LLM integration for answers)
-**🐛 Known Issues**: 
-- Confidence scoring hardcoded at 50%
-- No conversation context tracking
-- Missing LLM integration for answer generation
+### 6. RAG Engine Migration & Optimization
+**Problem**: Using Discovery Engine with snippet-based search limited chunks to ~50 tokens each.
+**Solution**: Migrated to Vertex AI RAG Engine for proper chunk-based retrieval with 4000-5000+ character chunks.
+
+### 7. Context Length Optimization
+**Problem**: Context limit of 8,000 characters was preventing all retrieved chunks from being passed to Gemini.
+**Solution**: Increased to 100,000 characters, allowing all 5 chunks (~20k total) to be passed for comprehensive answers.
+
+### 8. Model Optimization
+**Problem**: Using older Gemini 2.0 Flash model.
+**Solution**: Upgraded to Gemini 2.5 Flash Lite for better performance and lower cost.
+
+### 9. Current Status & Achievement
+**✅ COMPLETED**: Full-featured Slack RAG bot with comprehensive functionality
+**✅ WORKING**: True RAG generation with complete Gemini integration
+**✅ FIXED**: All major issues resolved:
+- ✅ Confidence scoring now uses actual relevance scores (not hardcoded 50%)
+- ✅ All 5 chunks (20k+ characters) passed to Gemini for superior answer quality
+- ✅ Using optimized Gemini 2.5 Flash Lite model
+- ✅ Proper chunk-based retrieval from RAG Engine
+- ✅ Comprehensive error handling and debugging
+- ✅ Socket Mode dispatch issues resolved

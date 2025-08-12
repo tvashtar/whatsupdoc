@@ -11,7 +11,7 @@ from slack_bolt.adapter.socket_mode import SocketModeHandler
 import structlog
 
 from .config import Config
-from .vertex_search import VertexSearchClient, SearchResult
+from .vertex_rag_client import VertexRAGClient, SearchResult
 from .gemini_rag import GeminiRAGService, RAGResponse
 
 # Environment variables loaded in app.py
@@ -60,12 +60,11 @@ class ResearchPaperBot:
             process_before_response=True  # Enable Socket Mode compatibility
         )
         
-        # Initialize Vertex AI Search client
-        self.search_client = VertexSearchClient(
+        # Initialize Vertex AI RAG Engine client
+        self.search_client = VertexRAGClient(
             project_id=self.config.project_id,
             location=self.config.location,
-            data_store_id=self.config.data_store_id,
-            app_id=self.config.app_id
+            rag_corpus_id=self.config.rag_corpus_id
         )
         
         # Initialize Gemini RAG service if enabled
@@ -98,8 +97,12 @@ class ResearchPaperBot:
         @self.app.command("/ask")
         def handle_ask_command(ack, respond, command, client):
             print(f"⚡ Received slash command: {command.get('text', '')}")
-            ack()
-            asyncio.run(self._handle_query(command, respond, client, command["text"]))
+            try:
+                ack()
+                asyncio.run(self._handle_query(command, respond, client, command["text"]))
+            except Exception as e:
+                print(f"❌ Error in slash command handler: {e}")
+                respond({"text": f"❌ Sorry, I encountered an error: {str(e)}"})
         
         # Handle DMs
         @self.app.message("")
@@ -144,7 +147,13 @@ class ResearchPaperBot:
                 max_results=self.config.max_results,
                 use_grounded_generation=self.config.use_grounded_generation
             )
+            
+            # Debug: Show chunk information
+            total_chunk_length = sum(len(result.snippet) for result in results)
             print(f"📊 Search returned {len(results)} results")
+            print(f"📏 Total length of retrieved chunks: {total_chunk_length:,} characters")
+            for i, result in enumerate(results, 1):
+                print(f"  Chunk {i}: {len(result.snippet):,} chars (confidence: {result.confidence_score:.1%})")
             
             # Generate comprehensive answer using RAG if enabled and results found
             if results and self.rag_service:

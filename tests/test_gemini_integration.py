@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from whatsupdoc.config import Config
-from whatsupdoc.vertex_search import VertexSearchClient
+from whatsupdoc.vertex_rag_client import VertexRAGClient
 from whatsupdoc.gemini_rag import GeminiRAGService
 
 def test_integration():
@@ -33,11 +33,10 @@ def test_integration():
     
     # Initialize search client
     print("🔍 Testing search client...")
-    search_client = VertexSearchClient(
+    search_client = VertexRAGClient(
         project_id=config.project_id,
         location=config.location,
-        data_store_id=config.data_store_id,
-        app_id=config.app_id
+        rag_corpus_id=config.rag_corpus_id
     )
     
     if not search_client.test_connection():

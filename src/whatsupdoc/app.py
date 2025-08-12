@@ -8,7 +8,7 @@ It handles initialization, environment setup, and bot startup.
 
 import os
 from dotenv import load_dotenv
-from .slack_bot import ResearchPaperBot
+from whatsupdoc.slack_bot import ResearchPaperBot
 
 
 def main():

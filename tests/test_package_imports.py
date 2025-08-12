@@ -21,8 +21,8 @@ def test_package_imports():
         
         # Test vertex search module
         print("🔍 Testing vertex search module...")
-        from whatsupdoc.vertex_search import VertexSearchClient, SearchResult
-        print("  ✅ VertexSearchClient and SearchResult imported")
+        from whatsupdoc.vertex_rag_client import VertexRAGClient, SearchResult
+        print("  ✅ VertexRAGClient and SearchResult imported")
         
         # Test gemini rag module
         print("🤖 Testing Gemini RAG module...")

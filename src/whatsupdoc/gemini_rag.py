@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from google import genai
 from google.genai import types
 
-from .vertex_search import SearchResult
+from .vertex_rag_client import SearchResult
 
 
 @dataclass
@@ -84,6 +84,11 @@ class GeminiRAGService:
                 )
             
             context = "".join(context_parts)
+            
+            # Debug: Show what's being passed to Gemini
+            print(f"🤖 Passing {len(used_sources)} sources to Gemini (total context: {len(context):,} chars)")
+            for i, source in enumerate(used_sources, 1):
+                print(f"  Source {i}: {len(source.snippet):,} chars from {source.title[:50]}...")
             
             # Calculate overall confidence from sources
             overall_confidence = sum(result.confidence_score for result in used_sources) / len(used_sources)

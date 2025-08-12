@@ -4,11 +4,10 @@ from typing import Optional
 
 class Config:
     def __init__(self):
-        # GCP Settings
+        # GCP Settings - RAG Engine Configuration
         self.project_id = os.getenv("PROJECT_ID", "")
-        self.location = os.getenv("LOCATION", "global")
-        self.data_store_id = os.getenv("DATA_STORE_ID", "")
-        self.app_id = os.getenv("APP_ID", "")
+        self.location = os.getenv("LOCATION", "us-central1")
+        self.rag_corpus_id = os.getenv("RAG_CORPUS_ID", "")
         
         # Slack Settings
         self.slack_bot_token = os.getenv("SLACK_BOT_TOKEN", "")
@@ -31,13 +30,13 @@ class Config:
         self.google_credentials_path: Optional[str] = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
         
         # Gemini Settings
-        self.gemini_model = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-001")
+        self.gemini_model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
         self.gemini_api_key = os.getenv("GEMINI_API_KEY", "")
         self.use_vertex_ai = os.getenv("USE_VERTEX_AI", "True").lower() == "true"
         
         # RAG Generation Settings
         self.enable_rag_generation = os.getenv("ENABLE_RAG_GENERATION", "True").lower() == "true"
-        self.max_context_length = int(os.getenv("MAX_CONTEXT_LENGTH", "8000"))
+        self.max_context_length = int(os.getenv("MAX_CONTEXT_LENGTH", "100000"))
         self.answer_temperature = float(os.getenv("ANSWER_TEMPERATURE", "0.3"))
     
     def validate(self) -> list[str]:
@@ -45,10 +44,8 @@ class Config:
         
         if not self.project_id:
             errors.append("PROJECT_ID is required")
-        if not self.data_store_id:
-            errors.append("DATA_STORE_ID is required")
-        if not self.app_id:
-            errors.append("APP_ID is required")
+        if not self.rag_corpus_id:
+            errors.append("RAG_CORPUS_ID is required")
         if not self.slack_bot_token:
             errors.append("SLACK_BOT_TOKEN is required")
         if not self.slack_signing_secret:

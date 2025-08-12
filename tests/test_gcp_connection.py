@@ -14,8 +14,7 @@ def test_env_variables():
     required_vars = [
         'PROJECT_ID',
         'LOCATION', 
-        'DATA_STORE_ID',
-        'APP_ID'
+        'RAG_CORPUS_ID'
     ]
     
     missing = []
@@ -53,57 +52,47 @@ def test_gcp_auth():
         print("  💡 Try running: gcloud auth application-default login")
         return False
 
-def test_vertex_search():
-    """Test connection to Vertex AI Search."""
-    print("\n🔍 Testing Vertex AI Search connection...")
+def test_vertex_rag_client():
+    """Test connection to Vertex AI RAG Engine."""
+    print("\n🔍 Testing Vertex AI RAG Engine connection...")
     
     try:
-        from google.cloud import discoveryengine_v1 as discoveryengine
+        from whatsupdoc.vertex_rag_client import VertexRAGClient
         
-        # Initialize the client
-        client = discoveryengine.SearchServiceClient()
-        
-        # Build the serving config name
+        # Get configuration
         project_id = os.getenv('PROJECT_ID')
         location = os.getenv('LOCATION')  
-        data_store_id = os.getenv('DATA_STORE_ID')
+        rag_corpus_id = os.getenv('RAG_CORPUS_ID')
         
-        serving_config = f"projects/{project_id}/locations/{location}/collections/default_collection/dataStores/{data_store_id}/servingConfigs/default_config"
+        print(f"  📍 Using RAG corpus: {rag_corpus_id}")
         
-        print(f"  📍 Using serving config: {serving_config}")
-        
-        # Test with a simple search
-        request = discoveryengine.SearchRequest(
-            serving_config=serving_config,
-            query="test",
-            page_size=1  # Just get 1 result to test connection
+        # Initialize the client
+        client = VertexRAGClient(
+            project_id=project_id,
+            location=location,
+            rag_corpus_id=rag_corpus_id
         )
         
-        response = client.search(request)
-        
-        # Try to get first result to verify the connection works
-        results = list(response.results)
-        
-        print(f"  ✅ Successfully connected to Vertex AI Search!")
-        print(f"  📊 Data store appears to be working (found {len(results)} results for test query)")
-        
-        if results:
-            print(f"  📄 Sample result title: {results[0].document.derived_struct_data.get('title', 'No title')}")
-        
-        return True
+        # Test connection
+        if client.test_connection():
+            print("  ✅ RAG Engine connection successful!")
+            return True
+        else:
+            print("  ❌ RAG Engine connection failed")
+            return False
         
     except ImportError:
-        print("  ❌ Missing google-cloud-discoveryengine package")
-        print("  💡 Install with: pip install google-cloud-discoveryengine")
+        print("  ❌ Missing required packages for RAG Engine")
+        print("  💡 Install with: uv sync")
         return False
     except Exception as e:
-        print(f"  ❌ Vertex AI Search connection failed: {e}")
-        print("  💡 Check your PROJECT_ID, LOCATION, DATA_STORE_ID, and APP_ID in .env")
+        print(f"  ❌ RAG Engine connection failed: {e}")
+        print("  💡 Check your PROJECT_ID, LOCATION, and RAG_CORPUS_ID in .env")
         return False
 
 def main():
     """Run all tests."""
-    print("🧪 GCP Vertex AI Search Setup Verification\n")
+    print("🧪 GCP Vertex AI RAG Engine Setup Verification\n")
     
     # Load environment variables
     load_dotenv()
@@ -112,7 +101,7 @@ def main():
     tests = [
         test_env_variables,
         test_gcp_auth,
-        test_vertex_search
+        test_vertex_rag_client
     ]
     
     passed = 0

@@ -6,12 +6,13 @@
 - [x] Create `.env` with all required environment variables
 - [x] Set up `config.py` for environment variable management
 
-## Phase 2: Vertex AI Search Integration ✅
-- [x] Implement `vertex_search.py` with core search functionality
+## Phase 2: Vertex AI RAG Engine Integration ✅
+- [x] Implement `vertex_rag_client.py` with RAG Engine functionality
 - [x] Add search query preprocessing and optimization
-- [x] Implement result formatting with snippets and sources
-- [ ] **Fix confidence scoring (currently stuck at 50%)**
+- [x] Implement result formatting with full chunks (not just snippets)
+- [x] **Fix confidence scoring (now uses actual relevance scores)**
 - [x] Add grounded generation toggle configuration
+- [x] Migrate from Discovery Engine to RAG Engine for proper chunk-based search
 
 ## Phase 3: Slack Bot Core Features ✅
 - [x] Implement basic Slack Bolt app initialization in `app.py`
@@ -36,12 +37,14 @@
 - [ ] Implement "View more results" option when available
 - [x] Add proper emoji and formatting for better readability
 
-## Phase 6: LLM Integration (NEW - Missing RAG Generation)
-- [ ] **Add Vertex AI Gemini integration for answer generation**
-- [ ] **Implement grounded generation using retrieved snippets**
-- [ ] **Add citation support linking answers to source documents**
-- [ ] **Create prompt templates for research paper Q&A**
-- [ ] **Add fallback to search-only mode when LLM fails**
+## Phase 6: LLM Integration ✅
+- [x] **Add Vertex AI Gemini integration for answer generation**
+- [x] **Implement grounded generation using retrieved chunks**
+- [x] **Add citation support linking answers to source documents**
+- [x] **Create prompt templates for research paper Q&A**
+- [x] **Add fallback to search-only mode when LLM fails**
+- [x] **Upgrade to Gemini 2.5 Flash Lite for better performance and cost**
+- [x] **Fix context length limiting (increased from 8k to 100k characters)**
 
 ## Phase 7: Testing Implementation ✅ (Partial)
 - [x] Write integration tests for search functionality
@@ -89,9 +92,11 @@
 - [ ] **Confidence thresholds filter results appropriately (needs scoring fix)**
 
 ## Current Status Summary
-**✅ WORKING:** Slack RAG bot with search functionality
-**🔄 MISSING:** True RAG generation (LLM integration for answers)
-**🐛 NEEDS FIX:** Confidence scoring stuck at 50%
+**✅ COMPLETED:** Full-featured Slack RAG bot with comprehensive functionality
+**✅ WORKING:** True RAG generation with Gemini integration
+**✅ FIXED:** Confidence scoring now uses actual relevance scores
+**✅ OPTIMIZED:** All 5 chunks (20k+ characters) now passed to Gemini for better answers
+**✅ UPGRADED:** Using Gemini 2.5 Flash Lite for better performance and lower cost
 
 ## Deployment Validation
 - [ ] Docker image builds successfully
