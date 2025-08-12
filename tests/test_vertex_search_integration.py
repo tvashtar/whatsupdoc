@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
 
 import os
+import sys
 import asyncio
 import logging
 from dotenv import load_dotenv
-import sys
-sys.path.append('slack-rag-bot')
-
-from config import Config
-from vertex_search import VertexSearchClient
+from whatsupdoc.config import Config
+from whatsupdoc.vertex_search import VertexSearchClient
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

@@ -11,19 +11,24 @@ def test_env_variables():
     """Test that all required Slack environment variables are set."""
     print("🔍 Testing Slack environment variables...")
     
+    # Required vars for Socket Mode (OAuth vars are optional)
     required_vars = [
         'SLACK_BOT_TOKEN',
-        'SLACK_SIGNING_SECRET',
-        'SLACK_APP_TOKEN',
+        'SLACK_SIGNING_SECRET', 
+        'SLACK_APP_TOKEN'
+    ]
+    
+    # Optional OAuth vars (only needed for OAuth flow, not Socket Mode)
+    optional_vars = [
         'SLACK_CLIENT_ID',
         'SLACK_CLIENT_SECRET'
     ]
     
-    missing = []
+    missing_required = []
     for var in required_vars:
         value = os.getenv(var)
         if not value:
-            missing.append(var)
+            missing_required.append(var)
         else:
             # Show partial value for security
             if 'TOKEN' in var or 'SECRET' in var:
@@ -32,11 +37,24 @@ def test_env_variables():
                 display_value = value
             print(f"  ✅ {var}: {display_value}")
     
-    if missing:
-        print(f"  ❌ Missing variables: {', '.join(missing)}")
+    # Check optional vars but don't fail if missing
+    missing_optional = []
+    for var in optional_vars:
+        value = os.getenv(var)
+        if not value:
+            missing_optional.append(var)
+        else:
+            display_value = value
+            print(f"  ✅ {var}: {display_value}")
+    
+    if missing_optional:
+        print(f"  💡 Optional (OAuth) variables not set: {', '.join(missing_optional)} - OK for Socket Mode")
+    
+    if missing_required:
+        print(f"  ❌ Missing required variables: {', '.join(missing_required)}")
         return False
     
-    print("  ✅ All Slack environment variables found!")
+    print("  ✅ All required Slack environment variables found!")
     return True
 
 def test_token_formats():

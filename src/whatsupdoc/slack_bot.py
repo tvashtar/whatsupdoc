@@ -10,11 +10,11 @@ from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 import structlog
 
-from config import Config
-from vertex_search import VertexSearchClient, SearchResult
+from .config import Config
+from .vertex_search import VertexSearchClient, SearchResult
+from .gemini_rag import GeminiRAGService, RAGResponse
 
-# Load environment variables
-load_dotenv()
+# Environment variables loaded in app.py
 
 # Configure structured logging
 structlog.configure(
@@ -67,6 +67,18 @@ class ResearchPaperBot:
             data_store_id=self.config.data_store_id,
             app_id=self.config.app_id
         )
+        
+        # Initialize Gemini RAG service if enabled
+        self.rag_service = None
+        if self.config.enable_rag_generation:
+            self.rag_service = GeminiRAGService(
+                project_id=self.config.project_id,
+                location=self.config.location,
+                model=self.config.gemini_model,
+                api_key=self.config.gemini_api_key if not self.config.use_vertex_ai else None,
+                use_vertex_ai=self.config.use_vertex_ai,
+                temperature=self.config.answer_temperature
+            )
         
         # Set up event handlers
         self._setup_handlers()
@@ -121,7 +133,7 @@ class ResearchPaperBot:
         
         # Send loading message
         loading_response = respond_func({
-            "text": f"🔍 Searching research papers for: `{clean_query}`..."
+            "text": f"🔍 Searching and analyzing documents for: `{clean_query}`..."
         })
         
         try:
@@ -134,8 +146,33 @@ class ResearchPaperBot:
             )
             print(f"📊 Search returned {len(results)} results")
             
-            # Format and send response
-            if results:
+            # Generate comprehensive answer using RAG if enabled and results found
+            if results and self.rag_service:
+                print("🤖 Generating comprehensive answer with Gemini...")
+                rag_response = await self.rag_service.generate_answer(
+                    query=clean_query,
+                    search_results=results,
+                    max_context_length=self.config.max_context_length
+                )
+                
+                # Format and send RAG response
+                response_blocks = self._format_rag_response(clean_query, rag_response)
+                
+                # Update the loading message with RAG answer
+                if hasattr(loading_response, 'get') and loading_response.get('ts'):
+                    client.chat_update(
+                        channel=channel_id,
+                        ts=loading_response['ts'],
+                        blocks=response_blocks,
+                        text=f"Generated comprehensive answer about: {clean_query}"
+                    )
+                else:
+                    respond_func({
+                        "blocks": response_blocks,
+                        "text": f"Generated comprehensive answer about: {clean_query}"
+                    })
+            elif results:
+                # Fallback to basic search results format if no RAG service
                 response_blocks = self._format_search_results(clean_query, results)
                 
                 # Update the loading message with results
@@ -156,9 +193,9 @@ class ResearchPaperBot:
                 client.chat_update(
                     channel=channel_id,
                     ts=loading_response.get('ts') if hasattr(loading_response, 'get') else None,
-                    text=f"🤔 No research papers found for: `{clean_query}`. Try rephrasing your question or using different keywords.",
+                    text=f"🤔 No relevant documents found for: `{clean_query}`. Try rephrasing your question or using different keywords.",
                 ) if hasattr(loading_response, 'get') else respond_func({
-                    "text": f"🤔 No research papers found for: `{clean_query}`. Try rephrasing your question or using different keywords."
+                    "text": f"🤔 No relevant documents found for: `{clean_query}`. Try rephrasing your question or using different keywords."
                 })
                 
         except Exception as e:
@@ -294,18 +331,140 @@ class ResearchPaperBot:
         
         return blocks
     
+    def _format_rag_response(self, query: str, rag_response: RAGResponse) -> List[Dict]:
+        """Format a comprehensive RAG response with generated answer and sources"""
+        confidence_emoji = "🟢" if rag_response.confidence_score >= 0.7 else "🟡" if rag_response.confidence_score >= 0.4 else "🔴"
+        
+        blocks = [
+            {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": f"🤖 Answer: {query}"
+                }
+            },
+            {
+                "type": "context",
+                "elements": [
+                    {
+                        "type": "mrkdwn",
+                        "text": f"{confidence_emoji} Confidence: {rag_response.confidence_score:.0%} • Sources: {len(rag_response.sources)} documents"
+                    }
+                ]
+            },
+            {
+                "type": "divider"
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": rag_response.answer
+                }
+            }
+        ]
+        
+        # Add sources section if available
+        if rag_response.sources:
+            blocks.extend([
+                {
+                    "type": "divider"
+                },
+                {
+                    "type": "header",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "📚 Sources"
+                    }
+                }
+            ])
+            
+            for i, result in enumerate(rag_response.sources, 1):
+                source_confidence_emoji = "🟢" if result.confidence_score >= 0.7 else "🟡" if result.confidence_score >= 0.4 else "🔴"
+                
+                blocks.extend([
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": f"*{i}. {result.title}*\n{source_confidence_emoji} Relevance: {result.confidence_score:.0%}"
+                        }
+                    },
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": f"```{result.snippet[:300]}{'...' if len(result.snippet) > 300 else ''}```"
+                        }
+                    }
+                ])
+                
+                # Add source link if available
+                if result.source_uri:
+                    source_text = result.source_uri
+                    if result.source_uri.startswith('gs://'):
+                        filename = result.source_uri.split('/')[-1]
+                        source_text = f"📄 {filename}"
+                    
+                    blocks.append({
+                        "type": "context",
+                        "elements": [
+                            {
+                                "type": "mrkdwn",
+                                "text": f"Source: {source_text}"
+                            }
+                        ]
+                    })
+                
+                # Add separator between sources (except last one)
+                if i < len(rag_response.sources):
+                    blocks.append({"type": "divider"})
+        
+        # Add footer with tips
+        blocks.extend([
+            {
+                "type": "divider"
+            },
+            {
+                "type": "context",
+                "elements": [
+                    {
+                        "type": "mrkdwn",
+                        "text": "💡 *Tip:* This answer was generated from your company documents. For follow-up questions, try asking for more details or clarification on specific points."
+                    }
+                ]
+            }
+        ])
+        
+        return blocks
+    
     def start(self):
         # Test connection to Vertex AI
-        print("🔍 Testing Vertex AI connection...")
+        print("🔍 Testing Vertex AI Search connection...")
         try:
             if not self.search_client.test_connection():
                 print("❌ Failed to connect to Vertex AI Search")
                 logger.error("Failed to connect to Vertex AI Search")
                 raise ConnectionError("Cannot connect to Vertex AI Search")
-            print("✅ Vertex AI connection successful")
+            print("✅ Vertex AI Search connection successful")
         except Exception as e:
-            print(f"❌ Vertex AI connection failed: {e}")
+            print(f"❌ Vertex AI Search connection failed: {e}")
             raise
+        
+        # Test Gemini connection if enabled
+        if self.rag_service:
+            print("🤖 Testing Gemini connection...")
+            try:
+                if not self.rag_service.test_connection():
+                    print("⚠️ Warning: Gemini connection failed - falling back to search-only mode")
+                    logger.warning("Gemini connection failed, using search-only mode")
+                    self.rag_service = None
+                else:
+                    print("✅ Gemini connection successful - RAG generation enabled")
+            except Exception as e:
+                print(f"⚠️ Warning: Gemini connection failed: {e} - falling back to search-only mode")
+                logger.warning("Gemini connection failed", error=str(e))
+                self.rag_service = None
         
         print(f"🤖 Starting ResearchPaperBot: {self.config.bot_name}")
         logger.info("Starting ResearchPaperBot", bot_name=self.config.bot_name)
@@ -329,16 +488,4 @@ class ResearchPaperBot:
             raise
 
 
-def main():
-    print("🌟 Starting whatsupdoc research paper bot...")
-    try:
-        bot = ResearchPaperBot()
-        bot.start()
-    except Exception as e:
-        print(f"💥 Bot startup failed: {e}")
-        import traceback
-        traceback.print_exc()
-
-
-if __name__ == "__main__":
-    main()
+# Entry point moved to app.py

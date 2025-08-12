@@ -29,6 +29,16 @@ class Config:
         
         # Google Cloud Authentication
         self.google_credentials_path: Optional[str] = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+        
+        # Gemini Settings
+        self.gemini_model = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-001")
+        self.gemini_api_key = os.getenv("GEMINI_API_KEY", "")
+        self.use_vertex_ai = os.getenv("USE_VERTEX_AI", "True").lower() == "true"
+        
+        # RAG Generation Settings
+        self.enable_rag_generation = os.getenv("ENABLE_RAG_GENERATION", "True").lower() == "true"
+        self.max_context_length = int(os.getenv("MAX_CONTEXT_LENGTH", "8000"))
+        self.answer_temperature = float(os.getenv("ANSWER_TEMPERATURE", "0.3"))
     
     def validate(self) -> list[str]:
         errors = []

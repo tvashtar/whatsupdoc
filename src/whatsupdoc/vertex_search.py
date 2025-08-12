@@ -235,16 +235,92 @@ class VertexSearchClient:
         return "No preview available"
     
     def _calculate_confidence(self, result) -> float:
-        # Simple confidence scoring based on available data
-        # In a real implementation, you might use more sophisticated scoring
-        base_score = 0.5
-        
-        # Boost score if we have good metadata
-        if hasattr(result, 'document') and result.document.struct_data:
-            base_score += 0.2
-        
-        # You could add more sophisticated scoring here
-        return min(base_score, 1.0)
+        """Calculate confidence score from Vertex AI Search result data"""
+        try:
+            # Check for actual relevance score from search results
+            if hasattr(result, 'relevance_score') and result.relevance_score is not None:
+                # Vertex AI Search relevance scores are typically 0-1 range
+                return float(result.relevance_score)
+            
+            # Check for model scores in metadata
+            if hasattr(result, 'model_scores') and result.model_scores:
+                scores = []
+                for score_name, score_value in result.model_scores.items():
+                    if isinstance(score_value, (int, float)):
+                        scores.append(float(score_value))
+                if scores:
+                    return sum(scores) / len(scores)
+            
+            # Check document-level quality signals
+            confidence = 0.3  # Base confidence
+            
+            if hasattr(result, 'document') and result.document:
+                document = result.document
+                
+                # Boost confidence for documents with rich metadata
+                if hasattr(document, 'struct_data') and document.struct_data:
+                    confidence += 0.2
+                
+                # Boost confidence for documents with derived data (processed content)
+                if hasattr(document, 'derived_struct_data') and document.derived_struct_data:
+                    confidence += 0.2
+                    
+                    # Extra boost if we have snippets (indicates good content extraction)
+                    derived_data = document.derived_struct_data
+                    if "snippets" in derived_data and derived_data["snippets"]:
+                        confidence += 0.2
+                
+                # Boost confidence based on content quality indicators
+                snippet_quality = self._assess_snippet_quality(document)
+                confidence += snippet_quality * 0.1
+            
+            return min(confidence, 1.0)
+            
+        except Exception as e:
+            logging.warning(f"Error calculating confidence score: {e}")
+            return 0.5  # Fallback to neutral confidence
+    
+    def _assess_snippet_quality(self, document) -> float:
+        """Assess the quality of extracted snippets to inform confidence scoring"""
+        try:
+            derived_data = document.derived_struct_data if hasattr(document, 'derived_struct_data') else {}
+            
+            if not derived_data or "snippets" not in derived_data:
+                return 0.0
+                
+            snippets = list(derived_data["snippets"])
+            if not snippets:
+                return 0.0
+            
+            # Quality indicators
+            quality_score = 0.0
+            
+            for snippet in snippets:
+                if "snippet" in snippet:
+                    content = str(snippet["snippet"])
+                    
+                    # Length indicator (not too short, not too long)
+                    length = len(content.strip())
+                    if 50 <= length <= 300:
+                        quality_score += 0.3
+                    elif 20 <= length < 50 or 300 < length <= 500:
+                        quality_score += 0.1
+                    
+                    # Completeness indicator (doesn't end mid-sentence)
+                    if content.strip().endswith(('.', '!', '?', ':', ';')):
+                        quality_score += 0.2
+                    
+                    # Coherence indicator (contains common English words)
+                    common_words = ['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with']
+                    word_count = sum(1 for word in common_words if word in content.lower())
+                    if word_count >= 3:
+                        quality_score += 0.2
+            
+            return min(quality_score / len(snippets), 1.0)
+            
+        except Exception as e:
+            logging.warning(f"Error assessing snippet quality: {e}")
+            return 0.0
     
     def _extract_metadata(self, document) -> Dict[str, Any]:
         metadata = {}
