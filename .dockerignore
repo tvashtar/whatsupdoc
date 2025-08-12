@@ -1,0 +1,56 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.coverage.*
+.cache
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Git
+.git/
+.gitignore
+
+# Environment files (we'll use Cloud Run env vars)
+.env
+.env.*
+
+# Documentation
+docs/
+# Keep README.md as it's needed for pip install
+
+# Tests (not needed in production)
+tests/
+pytest.ini
+.pytest_cache/
+
+# Development files
+*.log
+*.sqlite
+*.db
+
+# Cloud files
+.gcloudignore
+cloudbuild.yaml

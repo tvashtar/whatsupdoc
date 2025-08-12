@@ -67,6 +67,8 @@ I need to implement the code in **Section 2** of the PRD:
 - ✅ Configured Slack app with proper permissions
 - ✅ Set up all required environment variables
 - ✅ Tested RAG Engine functionality in AI Studio
+- ✅ Deployed to Cloud Run successfully
+- ✅ Bot is live and responding to queries
 
 ## Success Criteria:
 - Bot responds to queries within 5 seconds
@@ -102,17 +104,76 @@ uv run whatsupdoc
 - Package imports and dependencies
 - GCP authentication and access
 
-## Deployment Commands:
+## Cloud Run Deployment
+
+### Prerequisites - Required IAM Permissions
+Before deploying, ensure these IAM roles are granted to the appropriate service accounts:
+
 ```bash
-gcloud run deploy slack-rag-bot \
+# Grant permissions to Cloud Build service account (PROJECT_NUMBER@cloudbuild.gserviceaccount.com)
+gcloud projects add-iam-policy-binding PROJECT_ID \
+  --member="serviceAccount:PROJECT_NUMBER@cloudbuild.gserviceaccount.com" \
+  --role="roles/cloudbuild.builds.builder"
+
+gcloud projects add-iam-policy-binding PROJECT_ID \
+  --member="serviceAccount:PROJECT_NUMBER@cloudbuild.gserviceaccount.com" \
+  --role="roles/storage.admin"
+
+gcloud projects add-iam-policy-binding PROJECT_ID \
+  --member="serviceAccount:PROJECT_NUMBER@cloudbuild.gserviceaccount.com" \
+  --role="roles/artifactregistry.writer"
+
+# Grant permissions to Compute Engine default service account (PROJECT_NUMBER-compute@developer.gserviceaccount.com)
+gcloud projects add-iam-policy-binding PROJECT_ID \
+  --member="serviceAccount:PROJECT_NUMBER-compute@developer.gserviceaccount.com" \
+  --role="roles/logging.logWriter"
+
+gcloud projects add-iam-policy-binding PROJECT_ID \
+  --member="serviceAccount:PROJECT_NUMBER-compute@developer.gserviceaccount.com" \
+  --role="roles/storage.admin"
+
+gcloud projects add-iam-policy-binding PROJECT_ID \
+  --member="serviceAccount:PROJECT_NUMBER-compute@developer.gserviceaccount.com" \
+  --role="roles/artifactregistry.writer"
+
+# Enable required APIs
+gcloud services enable cloudbuild.googleapis.com artifactregistry.googleapis.com run.googleapis.com
+
+# Create Artifact Registry repository for Cloud Build
+gcloud artifacts repositories create cloud-run-source-deploy \
+  --repository-format=docker \
+  --location=us-central1 \
+  --description="Cloud Run source deployments"
+```
+
+### Deployment Command
+```bash
+gcloud run deploy whatsupdoc-slack-bot \
   --source . \
   --region us-central1 \
-  --service-account rag-bot-sa@PROJECT-ID.iam.gserviceaccount.com \
-  --set-env-vars-from-file .env.production \
+  --platform managed \
+  --allow-unauthenticated \
   --min-instances 0 \
-  --max-instances 10
+  --max-instances 10 \
+  --memory 1Gi \
+  --cpu 2 \
+  --timeout 60 \
+  --service-account rag-bot-sa@PROJECT_ID.iam.gserviceaccount.com \
+  --set-env-vars "PROJECT_ID=PROJECT_ID,LOCATION=us-central1,RAG_CORPUS_ID=YOUR_RAG_CORPUS_ID,SLACK_BOT_TOKEN=xoxb-xxx,SLACK_SIGNING_SECRET=xxx,USE_GROUNDED_GENERATION=True,MAX_RESULTS=5,RESPONSE_TIMEOUT=30,BOT_NAME=whatsupdoc,RATE_LIMIT_PER_USER=10,RATE_LIMIT_WINDOW=60,GEMINI_MODEL=gemini-2.5-flash-lite,USE_VERTEX_AI=True,ENABLE_RAG_GENERATION=True,MAX_CONTEXT_LENGTH=100000,ANSWER_TEMPERATURE=0.1" \
+  --quiet
 ```
-- remember to use uv and uv run where needed
+
+### Slack App Configuration for Cloud Run
+After deployment, configure your Slack app:
+1. **Disable Socket Mode** (Settings → Socket Mode → Toggle OFF)
+2. **Configure Event Subscriptions**:
+   - Enable Events
+   - Request URL: `https://YOUR-SERVICE-URL.run.app/slack/events`
+   - Subscribe to bot events: `app_mention`, `message.channels`, `message.groups`, `message.im`, `message.mpim`
+3. **Update Slash Commands**:
+   - Set `/ask` command URL to: `https://YOUR-SERVICE-URL.run.app/slack/events`
+4. **Update Interactivity & Shortcuts** (if used):
+   - Request URL: `https://YOUR-SERVICE-URL.run.app/slack/events`
 
 ## Implementation Lessons Learned
 
@@ -173,8 +234,17 @@ app_serving_config = f"projects/{project_id}/locations/{location}/collections/de
 **Problem**: Using older Gemini 2.0 Flash model.
 **Solution**: Upgraded to Gemini 2.5 Flash Lite for better performance and lower cost.
 
-### 9. Current Status & Achievement
-**✅ COMPLETED**: Full-featured Slack RAG bot with comprehensive functionality
+### 9. Cloud Run Deployment Challenges
+**Problem**: Bot worked locally with Socket Mode but failed on Cloud Run.
+**Solutions**:
+- Modified bot to support both Socket Mode (local dev) and HTTP mode (Cloud Run)
+- Made SLACK_APP_TOKEN optional when PORT env var is set (Cloud Run mode)
+- Fixed .dockerignore and .gcloudignore to include README.md needed for pip install
+- Changed Dockerfile CMD from `python -m whatsupdoc` to `whatsupdoc` entry point
+
+### 10. Current Status & Achievement
+**✅ COMPLETED**: Full-featured Slack RAG bot deployed to production
+**✅ DEPLOYED**: Running on Cloud Run at https://whatsupdoc-slack-bot-530988540591.us-central1.run.app
 **✅ WORKING**: True RAG generation with complete Gemini integration
 **✅ FIXED**: All major issues resolved:
 - ✅ Confidence scoring now uses actual relevance scores (not hardcoded 50%)
@@ -182,4 +252,5 @@ app_serving_config = f"projects/{project_id}/locations/{location}/collections/de
 - ✅ Using optimized Gemini 2.5 Flash Lite model
 - ✅ Proper chunk-based retrieval from RAG Engine
 - ✅ Comprehensive error handling and debugging
-- ✅ Socket Mode dispatch issues resolved
+- ✅ Socket Mode for local dev, HTTP mode for Cloud Run
+- ✅ Auto-scaling with scale-to-zero for cost efficiency

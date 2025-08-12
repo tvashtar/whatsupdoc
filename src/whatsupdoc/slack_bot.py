@@ -7,7 +7,10 @@ from typing import List, Dict
 
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
+from slack_bolt.adapter.flask import SlackRequestHandler
+from flask import Flask, request
 import structlog
+import os
 
 from .config import Config
 from .vertex_rag_client import VertexRAGClient, SearchResult
@@ -502,21 +505,42 @@ class ResearchPaperBot:
         
         logger.info(f"Starting ResearchPaperBot: {self.config.bot_name}")
         
-        # Start the bot
-        logger.info("Connecting to Slack...")
-        try:
-            handler = SocketModeHandler(self.app, self.config.slack_app_token)
-            logger.info("Socket Mode handler created successfully")
-            logger.info("Bot is starting...")
-            logger.info("whatsupdoc research paper bot is running!")
+        # Check if we're running in Cloud Run (PORT environment variable is set)
+        port = os.environ.get("PORT")
+        
+        if port:
+            # HTTP mode for Cloud Run
+            logger.info(f"Starting in HTTP mode on port {port}")
+            flask_app = Flask(__name__)
+            handler = SlackRequestHandler(self.app)
+            
+            @flask_app.route("/slack/events", methods=["POST"])
+            def slack_events():
+                return handler.handle(request)
+            
+            @flask_app.route("/", methods=["GET"])
+            def health_check():
+                return "OK", 200
+            
+            logger.info("whatsupdoc research paper bot is running in HTTP mode!")
             logger.info("Ready to answer questions about research papers!")
-            logger.info("   Try: @whatsupdoc what are the main findings about text analysis?")
-            logger.info("   Or:  /ask machine learning methodology")
-            logger.info("   Or:  DM me directly")
-            handler.start()
-        except Exception as e:
-            logger.error(f"Slack connection failed: {e}")
-            raise
+            flask_app.run(host="0.0.0.0", port=int(port))
+        else:
+            # Socket mode for local development
+            logger.info("Starting in Socket Mode...")
+            try:
+                handler = SocketModeHandler(self.app, self.config.slack_app_token)
+                logger.info("Socket Mode handler created successfully")
+                logger.info("Bot is starting...")
+                logger.info("whatsupdoc research paper bot is running!")
+                logger.info("Ready to answer questions about research papers!")
+                logger.info("   Try: @whatsupdoc what are the main findings about text analysis?")
+                logger.info("   Or:  /ask machine learning methodology")
+                logger.info("   Or:  DM me directly")
+                handler.start()
+            except Exception as e:
+                logger.error(f"Slack connection failed: {e}")
+                raise
 
 
 # Entry point moved to app.py

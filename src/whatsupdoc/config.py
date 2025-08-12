@@ -48,7 +48,9 @@ class Config:
             errors.append("SLACK_BOT_TOKEN is required")
         if not self.slack_signing_secret:
             errors.append("SLACK_SIGNING_SECRET is required")
-        if not self.slack_app_token:
-            errors.append("SLACK_APP_TOKEN is required")
+        
+        # Only require app token if not running in Cloud Run (no PORT env var)
+        if not os.getenv("PORT") and not self.slack_app_token:
+            errors.append("SLACK_APP_TOKEN is required for Socket Mode")
             
         return errors

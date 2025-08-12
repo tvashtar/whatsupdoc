@@ -1,13 +1,16 @@
 # What's Up Doc? 🤖
 
-A Slack RAG (Retrieval-Augmented Generation) chatbot that allows employees to query company knowledge base using natural language. Built with Google Cloud's Vertex AI RAG Engine and deployed on Cloud Run.
+A production-ready Slack RAG (Retrieval-Augmented Generation) chatbot that allows employees to query company knowledge base using natural language. Built with Google Cloud's Vertex AI RAG Engine for document retrieval and Gemini for answer generation, deployed on Cloud Run for serverless auto-scaling.
+
+**Live in Production**: Successfully deployed and serving queries!
 
 ## 🏗️ Architecture
 
 - **Knowledge Base**: Vertex AI RAG Engine (handles document ingestion, chunking, embedding, and retrieval)
+- **Answer Generation**: Gemini 2.5 Flash Lite for RAG-based response generation
 - **Interface**: Slack bot responding to @mentions, slash commands, and DMs
-- **Hosting**: Google Cloud Run (serverless, auto-scaling)
-- **Language**: Python with Slack Bolt framework
+- **Hosting**: Google Cloud Run (serverless, auto-scaling, scale-to-zero)
+- **Language**: Python 3.11 with Slack Bolt framework and Flask for HTTP mode
 
 ## 📋 Features
 
@@ -234,7 +237,16 @@ RATE_LIMIT_WINDOW=60
 uv sync
 ```
 
-2. **Verify your setup**:
+2. **Run locally (Socket Mode)**:
+```bash
+# Set environment variables
+source .env
+
+# Run the bot
+uv run whatsupdoc
+```
+
+3. **Verify your setup**:
 ```bash
 # Run all tests
 uv run tests/run_all_tests.py
@@ -245,13 +257,13 @@ uv run tests/test_gemini_integration.py
 uv run tests/test_slack_connection.py
 ```
 
-Once your environment is set up, you'll be ready for the code implementation phase. The bot will be built with:
+### Dual Mode Support
 
-- **Python 3.11+**
-- **Slack Bolt Framework** for Slack integration  
-- **Google Cloud Vertex AI RAG Engine** for chunk-based document retrieval
-- **Gemini 2.5 Flash Lite** for RAG-based answer generation
-- **Cloud Run** for serverless deployment
+The bot supports two modes:
+- **Socket Mode** (local development): Uses SLACK_APP_TOKEN for websocket connection
+- **HTTP Mode** (Cloud Run): Uses Flask server listening on PORT environment variable
+
+The bot automatically detects which mode to use based on the presence of the PORT environment variable.
 
 ## 📚 Usage Examples
 
@@ -287,25 +299,81 @@ All configuration is handled through environment variables in your `.env` file:
 | `RATE_LIMIT_PER_USER` | Max queries per user | `10` |
 | `RATE_LIMIT_WINDOW` | Rate limit window in seconds | `60` |
 
-## 🚀 Deployment
+## 🚀 Deployment to Cloud Run
+
+### Prerequisites - Required IAM Permissions
+
+Before deploying, ensure the necessary service accounts have proper permissions:
+
+```bash
+# Get your project number
+PROJECT_NUMBER=$(gcloud projects describe PROJECT_ID --format='value(projectNumber)')
+
+# Grant permissions to Cloud Build service account
+gcloud projects add-iam-policy-binding PROJECT_ID \
+  --member="serviceAccount:${PROJECT_NUMBER}@cloudbuild.gserviceaccount.com" \
+  --role="roles/cloudbuild.builds.builder"
+
+gcloud projects add-iam-policy-binding PROJECT_ID \
+  --member="serviceAccount:${PROJECT_NUMBER}@cloudbuild.gserviceaccount.com" \
+  --role="roles/storage.admin"
+
+gcloud projects add-iam-policy-binding PROJECT_ID \
+  --member="serviceAccount:${PROJECT_NUMBER}@cloudbuild.gserviceaccount.com" \
+  --role="roles/artifactregistry.writer"
+
+# Grant permissions to Compute Engine default service account  
+gcloud projects add-iam-policy-binding PROJECT_ID \
+  --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
+  --role="roles/logging.logWriter"
+
+gcloud projects add-iam-policy-binding PROJECT_ID \
+  --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
+  --role="roles/storage.admin"
+
+gcloud projects add-iam-policy-binding PROJECT_ID \
+  --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
+  --role="roles/artifactregistry.writer"
+
+# Enable required APIs
+gcloud services enable cloudbuild.googleapis.com artifactregistry.googleapis.com run.googleapis.com
+
+# Create Artifact Registry repository for Cloud Build
+gcloud artifacts repositories create cloud-run-source-deploy \
+  --repository-format=docker \
+  --location=us-central1 \
+  --description="Cloud Run source deployments"
+```
 
 ### Deploy to Cloud Run
 
 1. **Build and deploy**:
 ```bash
-gcloud run deploy slack-rag-bot \
+gcloud run deploy whatsupdoc-slack-bot \
   --source . \
   --region us-central1 \
-  --service-account rag-bot-sa@PROJECT-ID.iam.gserviceaccount.com \
-  --set-env-vars-from-file .env.production \
+  --platform managed \
+  --allow-unauthenticated \
   --min-instances 0 \
-  --max-instances 10
+  --max-instances 10 \
+  --memory 1Gi \
+  --cpu 2 \
+  --timeout 60 \
+  --service-account rag-bot-sa@PROJECT-ID.iam.gserviceaccount.com \
+  --set-env-vars "PROJECT_ID=PROJECT_ID,LOCATION=us-central1,RAG_CORPUS_ID=YOUR_RAG_CORPUS_ID,SLACK_BOT_TOKEN=xoxb-xxx,SLACK_SIGNING_SECRET=xxx,USE_GROUNDED_GENERATION=True,MAX_RESULTS=5,RESPONSE_TIMEOUT=30,BOT_NAME=whatsupdoc,RATE_LIMIT_PER_USER=10,RATE_LIMIT_WINDOW=60,GEMINI_MODEL=gemini-2.5-flash-lite,USE_VERTEX_AI=True,ENABLE_RAG_GENERATION=True,MAX_CONTEXT_LENGTH=100000,ANSWER_TEMPERATURE=0.1" \
+  --quiet
 ```
 
-2. **Update Slack app configuration**:
-   - Get the Cloud Run service URL from the deployment output
-   - Update your Slack app's Event Subscriptions URL
-   - Update your Slack app's Slash Commands URL
+2. **Configure Slack app for Cloud Run** (IMPORTANT):
+   - **Disable Socket Mode**: Settings → Socket Mode → Toggle OFF
+   - **Configure Event Subscriptions**:
+     - Enable Events
+     - Request URL: `https://YOUR-SERVICE-URL.run.app/slack/events`
+     - Subscribe to bot events: `app_mention`, `message.channels`, `message.groups`, `message.im`, `message.mpim`
+   - **Update Slash Commands**:
+     - Set `/ask` command URL to: `https://YOUR-SERVICE-URL.run.app/slack/events`
+   - **Update Interactivity & Shortcuts** (if used):
+     - Request URL: `https://YOUR-SERVICE-URL.run.app/slack/events`
 
 3. **Monitor logs**:
 ```bash
