@@ -50,6 +50,26 @@ A production-ready Slack RAG (Retrieval-Augmented Generation) chatbot that allow
 - 🛡️ Rate limiting and error handling
 - 📊 Conversation context for follow-up questions
 
+## Costs
+
+This architecture **scales down to near-$0 cost** when not in use, making it ideal for reference implementations and low-traffic scenarios.
+
+### ✅ True Scale-to-Zero Components
+- **Cloud Functions Gen2**: Deployed with `--min-instances 0`, only charged during document processing
+- **Eventarc Triggers**: No cost when idle, minimal per-event charges when active
+- **Pub/Sub**: No cost when no messages flowing
+
+### 💰 Minimal Fixed Costs (When Idle)
+- **GCS Document Storage**: ~$0.020/GB/month for Standard storage
+- **Vertex AI RAG Corpus Storage**: ~$0.020/GB/month for ingested/chunked documents
+- **Cloud Logging**: 50GB free tier, then $0.50/GB (negligible for this use case)
+
+### 📊 Estimated Monthly Cost When Idle
+- **Total idle cost**: ~$0.02-0.10/month (assuming <5GB of documents)
+- **Active processing**: Pay-per-use for function execution time, RAG API calls, and event delivery
+
+**Perfect for**: Reference implementations, development environments, and low-traffic production workloads that need to minimize costs while maintaining full functionality.
+
 ## 🚀 Quick Start
 
 ### Prerequisites
