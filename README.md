@@ -6,6 +6,32 @@ A production-ready Slack RAG (Retrieval-Augmented Generation) chatbot that allow
 
 ## 🏗️ Architecture
 
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│     Slack       │    │   Cloud Run      │    │  Google Cloud   │
+│                 │    │                  │    │                 │
+│  @mentions      │───▶│  WhatsUpDoc Bot  │───▶│  Vertex AI      │
+│  /ask commands  │    │                  │    │  RAG Engine     │
+│  DMs            │    │  • Query proc.   │    │                 │
+│                 │    │  • RAG retrieval │    │  • 1000+ PDFs   │
+│                 │    │  • Answer gen.   │    │  • Chunking     │
+│                 │◀───│  • Response fmt. │◀───│  • Embeddings   │
+│  Rich responses │    │                  │    │  • Search       │
+│  w/ sources     │    │  Python 3.11     │    │                 │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+                                │                        │
+                                │                        ▼
+                                │               ┌─────────────────┐
+                                │               │     Gemini      │
+                                │               │  2.5 Flash Lite │
+                                └──────────────▶│                 │
+                                                │ • RAG synthesis │
+                                                │ • Answer gen.   │
+                                                │ • Citations     │
+                                                └─────────────────┘
+```
+
+**Components:**
 - **Knowledge Base**: Vertex AI RAG Engine (handles document ingestion, chunking, embedding, and retrieval)
 - **Answer Generation**: Gemini 2.5 Flash Lite for RAG-based response generation
 - **Interface**: Slack bot responding to @mentions, slash commands, and DMs
