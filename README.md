@@ -14,21 +14,22 @@ A production-ready Slack RAG (Retrieval-Augmented Generation) chatbot that allow
 │  /ask commands  │    │                  │    │  RAG Engine     │
 │  DMs            │    │  • Query proc.   │    │                 │
 │                 │    │  • RAG retrieval │    │  • 1000+ PDFs   │
-│                 │    │  • Answer gen.   │    │  • Chunking     │
-│                 │◀───│  • Response fmt. │◀───│  • Embeddings   │
+│                 │    │  • Answer gen.   │◀───│  • Chunking     │
+│                 │◀───│  • Response fmt. │    │  • Embeddings   │
 │  Rich responses │    │                  │    │  • Search       │
 │  w/ sources     │    │  Python 3.11     │    │                 │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
-                                │                        │
-                                │                        ▼
-                                │               ┌─────────────────┐
-                                │               │     Gemini      │
-                                │               │  2.5 Flash Lite │
-                                └──────────────▶│                 │
-                                                │ • RAG synthesis │
-                                                │ • Answer gen.   │
-                                                │ • Citations     │
-                                                └─────────────────┘
+                                │
+                                │
+                                ▼
+                       ┌─────────────────┐
+                       │     Gemini      │
+                       │  2.5 Flash Lite │
+                       │                 │
+                       │ • RAG synthesis │
+                       │ • Answer gen.   │
+                       │ • Citations     │
+                       └─────────────────┘
 ```
 
 **Components:**
