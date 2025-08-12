@@ -216,3 +216,7 @@ infra/.terraform.lock.hcl
 infra/terraform.tfvars
 
 scratch/
+
+# Development files (not needed in public repo)
+TODO.md
+.claude/

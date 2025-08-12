@@ -2,7 +2,7 @@
 
 A production-ready Slack RAG (Retrieval-Augmented Generation) chatbot that allows employees to query company knowledge base using natural language. Built with Google Cloud's Vertex AI RAG Engine for document retrieval and Gemini for answer generation, deployed on Cloud Run for serverless auto-scaling.
 
-**Live in Production**: Successfully deployed and serving queries!
+**Ready for Production**: Complete implementation with deployment guides and testing suite!
 
 ## 🏗️ Architecture
 
@@ -102,12 +102,12 @@ This architecture **scales down to near-$0 cost** when not in use, making it ide
 
 ### 1. Environment Setup
 
-1. Copy the example environment file:
+1. Create your environment file:
 ```bash
-cp .env.example .env
+touch .env
 ```
 
-2. Follow the setup sections below to populate your `.env` file with actual values.
+2. Follow the setup sections below to populate your `.env` file with the required values.
 
 ### 2. Google Cloud Setup
 
@@ -115,7 +115,6 @@ cp .env.example .env
 
 ```bash
 gcloud services enable aiplatform.googleapis.com
-gcloud services enable discoveryengine.googleapis.com
 gcloud services enable run.googleapis.com
 gcloud services enable storage.googleapis.com
 ```
@@ -124,7 +123,6 @@ Or enable manually in the GCP Console:
 1. Go to "APIs & Services" → "Library"
 2. Enable:
    - Vertex AI API
-   - Discovery Engine API (powers Vertex AI Search)
    - Cloud Run API
    - Cloud Storage API
 
@@ -133,7 +131,7 @@ Or enable manually in the GCP Console:
 1. **Create Bucket**:
    - Go to GCP Console → "Storage" → "Buckets" → "Create"
    - **Name**: Pick unique name (e.g., `company-knowledge-base-docs`)
-   - **Location type**: Choose Region (same as planned Data Store location)
+   - **Location type**: Choose Region (same as your RAG Engine location)
    - **Storage class**: Standard
    - Leave other settings as defaults → Click "Create"
 
@@ -163,7 +161,7 @@ Or enable manually in the GCP Console:
      - Chunk size: 512 tokens (recommended)
      - Chunk overlap: 100 tokens
    - Start import and wait for completion (10-30 minutes for 1000 PDFs)
-   - **NOTE**: To add new documents later, return here and repeat the import process
+   - **NOTE**: To add new documents later, you can either use the auto-ingest feature (recommended) or return here and repeat the import process
 
 4. **Get Required Values for .env**:
    ```bash
@@ -196,22 +194,15 @@ gcloud projects add-iam-policy-binding YOUR-PROJECT-ID \
   --role="roles/aiplatform.viewer"
 ```
 
-3. **Create and Download Key**:
-```bash
-gcloud iam service-accounts keys create service-account.json \
-  --iam-account=rag-bot-sa@YOUR-PROJECT-ID.iam.gserviceaccount.com \
-  --project=YOUR-PROJECT-ID
-```
+3. **Service Account Authentication**:
+   - **For Cloud Run deployment**: No JSON key needed! Cloud Run uses the service account directly via `--service-account` flag
+   - **For local development only**: You can use Application Default Credentials:
+   ```bash
+   # Authenticate with your user account (for local testing)
+   gcloud auth application-default login
+   ```
 
-   Or create via GCP Console:
-   - Go to "IAM & Admin" → "Service Accounts"
-   - Click on your service account → "Keys" → "Add Key" → "JSON"
-   - Download and save as `service-account.json` in your project root
-
-4. **Update your `.env` file**:
-```bash
-GOOGLE_APPLICATION_CREDENTIALS=./service-account.json
-```
+**Note**: The deployment uses the service account directly without JSON keys, following Google Cloud security best practices.
 
 ### 3. Slack App Setup
 
@@ -286,9 +277,6 @@ USE_GROUNDED_GENERATION=True
 MAX_RESULTS=5
 RESPONSE_TIMEOUT=30
 
-# Service Account (path to your downloaded JSON key)
-GOOGLE_APPLICATION_CREDENTIALS=./service-account.json
-
 # Bot Configuration  
 BOT_NAME=KnowledgeBot
 RATE_LIMIT_PER_USER=10
@@ -298,7 +286,7 @@ RATE_LIMIT_WINDOW=60
 GCS_DOCUMENTS_BUCKET=your-bucket-name
 ```
 
-**✅ Setup Complete!** Once all values are populated, you're ready to deploy and use the bot.
+**✅ Configuration Complete!** Once all values are populated, you're ready to install dependencies and deploy the bot.
 
 ### 5. Auto-Ingest Setup (Optional)
 
@@ -330,8 +318,8 @@ uv sync
 
 2. **Run locally (Socket Mode)**:
 ```bash
-# Set environment variables
-source .env
+# Make sure your .env file contains all required variables
+# The application will automatically load them
 
 # Run the bot
 uv run whatsupdoc
@@ -509,4 +497,4 @@ gcloud run logs read --service whatsupdoc-slack-bot --region us-central1
 
 ## 📞 Support
 
-For issues with setup or deployment, check the troubleshooting section or create an issue in this repository.
+For issues with setup or deployment, create an issue in this repository or check the detailed documentation in the `cloud-functions/auto-ingest/README.md` for Cloud Function specific issues.
