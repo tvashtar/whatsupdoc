@@ -19,22 +19,34 @@ A production-ready Slack RAG (Retrieval-Augmented Generation) chatbot that allow
 │  Rich responses │    │                  │    │  • Search       │
 │  w/ sources     │    │  Python 3.11     │    │                 │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
-                              │    ▲        
-                              ▼    │       
-                       ┌──────────────────┐ 
-                       │     Gemini       │ 
-                       │  2.5 Flash Lite  │
-                       │                  │
-                       │  • RAG synthesis │
-                       │  • Answer gen.   │
-                       │  • Citations     │
-                       └──────────────────┘
+                              │    ▲                    │
+                              ▼    │                    ▼
+                       ┌──────────────────┐    ┌──────────────────┐
+                       │     Gemini       │    │  Auto-Ingest     │
+                       │  2.5 Flash Lite  │    │  Cloud Function  │
+                       │                  │    │                  │
+                       │  • RAG synthesis │    │  • GCS Trigger   │
+                       │  • Answer gen.   │    │  • Auto-chunking │
+                       │  • Citations     │    │  • RAG Import    │
+                       └──────────────────┘    └──────────────────┘
+                                                        ▲
+                                                        │
+                                               ┌──────────────────┐
+                                               │  GCS Bucket      │
+                                               │  Document Store  │
+                                               │                  │
+                                               │  • File uploads  │
+                                               │  • Auto-detect   │
+                                               │  • Multi-format  │
+                                               └──────────────────┘
 ```
 
 **Components:**
 - **Knowledge Base**: Vertex AI RAG Engine (handles document ingestion, chunking, embedding, and retrieval)
 - **Answer Generation**: Gemini 2.5 Flash Lite for RAG-based response generation
 - **Interface**: Slack bot responding to @mentions, slash commands, and DMs
+- **Auto-Ingest**: Cloud Function for automatic document processing from GCS uploads
+- **Document Storage**: Google Cloud Storage bucket with automatic processing triggers
 - **Hosting**: Google Cloud Run (serverless, auto-scaling, scale-to-zero)
 - **Language**: Python 3.11 with Slack Bolt framework and Flask for HTTP mode
 
@@ -49,13 +61,18 @@ A production-ready Slack RAG (Retrieval-Augmented Generation) chatbot that allow
 - ⚡ Responses within 5 seconds
 - 🛡️ Rate limiting and error handling
 - 📊 Conversation context for follow-up questions
+- 🔄 **Auto-document ingestion** from GCS bucket uploads
+- 📁 **Multi-format support** (PDF, DOCX, TXT, HTML, MD)
+- 🎯 **True RAG generation** with 100k+ character context
+- 💰 **Scale-to-zero cost optimization** when idle
 
-## Costs
+## 💰 Costs
 
 This architecture **scales down to near-$0 cost** when not in use, making it ideal for reference implementations and low-traffic scenarios.
 
 ### ✅ True Scale-to-Zero Components
-- **Cloud Functions Gen2**: Deployed with `--min-instances 0`, only charged during document processing
+- **Cloud Run**: Bot application with `--min-instances 0`, only charged during active queries
+- **Cloud Functions Gen2**: Auto-ingest function only charged during document processing
 - **Eventarc Triggers**: No cost when idle, minimal per-event charges when active
 - **Pub/Sub**: No cost when no messages flowing
 
@@ -66,7 +83,12 @@ This architecture **scales down to near-$0 cost** when not in use, making it ide
 
 ### 📊 Estimated Monthly Cost When Idle
 - **Total idle cost**: ~$0.02-0.10/month (assuming <5GB of documents)
-- **Active processing**: Pay-per-use for function execution time, RAG API calls, and event delivery
+- **Active usage**: Pay-per-use for:
+  - Cloud Run execution time during queries
+  - Cloud Function execution during document uploads
+  - Gemini API calls for answer generation
+  - RAG Engine API calls for document search
+  - Eventarc event delivery
 
 **Perfect for**: Reference implementations, development environments, and low-traffic production workloads that need to minimize costs while maintaining full functionality.
 
@@ -149,6 +171,7 @@ Or enable manually in the GCP Console:
    PROJECT_ID=your-actual-project-id           # From GCP Console
    LOCATION=us-central1                        # Or your chosen region
    RAG_CORPUS_ID=projects/PROJECT_ID/locations/LOCATION/ragCorpora/CORPUS_ID  # Full corpus resource name
+   GCS_DOCUMENTS_BUCKET=your-bucket-name       # For auto-ingest feature
    ```
 
 #### Create Service Account
@@ -270,9 +293,30 @@ GOOGLE_APPLICATION_CREDENTIALS=./service-account.json
 BOT_NAME=KnowledgeBot
 RATE_LIMIT_PER_USER=10
 RATE_LIMIT_WINDOW=60
+
+# Auto-Ingest Configuration (optional)
+GCS_DOCUMENTS_BUCKET=your-bucket-name
 ```
 
-**✅ Setup Complete!** Once all values are populated, you're ready for code implementation.
+**✅ Setup Complete!** Once all values are populated, you're ready to deploy and use the bot.
+
+### 5. Auto-Ingest Setup (Optional)
+
+To enable automatic document ingestion when files are uploaded to GCS:
+
+```bash
+# Deploy the auto-ingest Cloud Function
+cd cloud-functions/auto-ingest
+./deploy.sh
+```
+
+This creates a Cloud Function that automatically:
+- Detects new document uploads to your GCS bucket
+- Processes and chunks the documents
+- Ingests them into your RAG corpus
+- Makes them immediately searchable via the bot
+
+Supported formats: PDF, DOCX, TXT, HTML, MD files.
 
 ## 🛠️ Development
 
@@ -345,6 +389,9 @@ All configuration is handled through environment variables in your `.env` file:
 | `RESPONSE_TIMEOUT` | Query timeout in seconds | `30` |
 | `RATE_LIMIT_PER_USER` | Max queries per user | `10` |
 | `RATE_LIMIT_WINDOW` | Rate limit window in seconds | `60` |
+| `GCS_DOCUMENTS_BUCKET` | Auto-ingest source bucket | (optional) |
+| `MAX_CONTEXT_LENGTH` | Max characters for Gemini | `100000` |
+| `GEMINI_MODEL` | Gemini model version | `gemini-2.5-flash-lite` |
 
 ## 🚀 Deployment to Cloud Run
 
