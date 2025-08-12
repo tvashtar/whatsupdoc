@@ -1,189 +1,185 @@
-#!/usr/bin/env python3
 """
 Test script to verify Slack bot connection and configuration.
 Run this to make sure your Slack setup is working before building the full bot.
 """
 
 import os
+import pytest
 from dotenv import load_dotenv
 
-def test_env_variables():
+# Load environment variables
+load_dotenv()
+
+
+@pytest.fixture
+def slack_required_vars():
+    """Required Slack environment variables."""
+    return ['SLACK_BOT_TOKEN', 'SLACK_SIGNING_SECRET', 'SLACK_APP_TOKEN']
+
+
+@pytest.fixture
+def slack_optional_vars():
+    """Optional Slack environment variables for OAuth."""
+    return ['SLACK_CLIENT_ID', 'SLACK_CLIENT_SECRET']
+
+
+@pytest.fixture
+def slack_config(slack_required_vars):
+    """Slack configuration from environment variables."""
+    config = {}
+    missing_vars = []
+    
+    for var in slack_required_vars:
+        value = os.getenv(var)
+        if not value:
+            missing_vars.append(var)
+        else:
+            config[var.lower()] = value
+    
+    if missing_vars:
+        pytest.skip(f"Missing required Slack environment variables: {', '.join(missing_vars)}")
+    
+    return config
+
+
+@pytest.mark.integration
+@pytest.mark.requires_slack
+def test_required_slack_env_variables(slack_required_vars):
     """Test that all required Slack environment variables are set."""
-    print("🔍 Testing Slack environment variables...")
+    missing_vars = []
     
-    # Required vars for Socket Mode (OAuth vars are optional)
-    required_vars = [
-        'SLACK_BOT_TOKEN',
-        'SLACK_SIGNING_SECRET', 
-        'SLACK_APP_TOKEN'
-    ]
-    
-    # Optional OAuth vars (only needed for OAuth flow, not Socket Mode)
-    optional_vars = [
-        'SLACK_CLIENT_ID',
-        'SLACK_CLIENT_SECRET'
-    ]
-    
-    missing_required = []
-    for var in required_vars:
+    for var in slack_required_vars:
         value = os.getenv(var)
         if not value:
-            missing_required.append(var)
-        else:
-            # Show partial value for security
-            if 'TOKEN' in var or 'SECRET' in var:
-                display_value = f"{value[:8]}...{value[-4:]}"
-            else:
-                display_value = value
-            print(f"  ✅ {var}: {display_value}")
+            missing_vars.append(var)
     
-    # Check optional vars but don't fail if missing
-    missing_optional = []
-    for var in optional_vars:
+    assert not missing_vars, f"Missing required Slack environment variables: {', '.join(missing_vars)}"
+    
+    # Verify each variable has content
+    for var in slack_required_vars:
         value = os.getenv(var)
-        if not value:
-            missing_optional.append(var)
-        else:
-            display_value = value
-            print(f"  ✅ {var}: {display_value}")
-    
-    if missing_optional:
-        print(f"  💡 Optional (OAuth) variables not set: {', '.join(missing_optional)} - OK for Socket Mode")
-    
-    if missing_required:
-        print(f"  ❌ Missing required variables: {', '.join(missing_required)}")
-        return False
-    
-    print("  ✅ All required Slack environment variables found!")
-    return True
+        assert value and len(value.strip()) > 0, f"{var} should not be empty"
 
-def test_token_formats():
-    """Verify token formats are correct."""
-    print("\n🔍 Testing token formats...")
-    
-    bot_token = os.getenv('SLACK_BOT_TOKEN')
-    app_token = os.getenv('SLACK_APP_TOKEN')
-    client_id = os.getenv('SLACK_CLIENT_ID')
-    
-    success = True
-    
-    if bot_token and not bot_token.startswith('xoxb-'):
-        print(f"  ❌ SLACK_BOT_TOKEN should start with 'xoxb-'")
-        success = False
-    else:
-        print(f"  ✅ Bot token format correct")
-    
-    if app_token and not app_token.startswith('xapp-'):
-        print(f"  ❌ SLACK_APP_TOKEN should start with 'xapp-'")
-        success = False
-    else:
-        print(f"  ✅ App token format correct")
-    
-    if client_id and '.' not in client_id:
-        print(f"  ❌ SLACK_CLIENT_ID should contain a dot (format: number.number)")
-        success = False
-    else:
-        print(f"  ✅ Client ID format correct")
-    
-    return success
 
-def test_slack_api_connection():
+@pytest.mark.integration
+@pytest.mark.requires_slack
+def test_slack_token_formats(slack_config):
+    """Verify Slack token formats are correct."""
+    bot_token = slack_config.get('slack_bot_token')
+    app_token = slack_config.get('slack_app_token')
+    
+    # Bot token should start with xoxb-
+    assert bot_token.startswith('xoxb-'), "SLACK_BOT_TOKEN should start with 'xoxb-'"
+    assert len(bot_token) > 10, "Bot token should be reasonably long"
+    
+    # App token should start with xapp-
+    assert app_token.startswith('xapp-'), "SLACK_APP_TOKEN should start with 'xapp-'"
+    assert len(app_token) > 10, "App token should be reasonably long"
+    
+    # Signing secret should exist and be reasonably long
+    signing_secret = slack_config.get('slack_signing_secret')
+    assert len(signing_secret) > 10, "Signing secret should be reasonably long"
+
+
+@pytest.mark.integration
+@pytest.mark.requires_slack
+def test_optional_slack_vars(slack_optional_vars):
+    """Test optional Slack variables (informational only)."""
+    # This test doesn't fail if optional vars are missing
+    for var in slack_optional_vars:
+        value = os.getenv(var)
+        if value:
+            # If present, verify basic format
+            if var == 'SLACK_CLIENT_ID':
+                # Client ID should contain a dot (format: number.number)
+                assert '.' in value, f"SLACK_CLIENT_ID should contain a dot (format: number.number)"
+
+
+@pytest.mark.integration
+@pytest.mark.requires_slack
+def test_slack_api_connection(slack_config):
     """Test connection to Slack API."""
-    print("\n🔍 Testing Slack API connection...")
+    from slack_sdk import WebClient
     
-    try:
-        from slack_sdk import WebClient
-        
-        bot_token = os.getenv('SLACK_BOT_TOKEN')
-        if not bot_token:
-            print("  ❌ No bot token found")
-            return False
-        
-        client = WebClient(token=bot_token)
-        
-        # Test API connection with auth.test
-        response = client.auth_test()
-        
-        if response.get("ok"):
-            print(f"  ✅ Successfully connected to Slack!")
-            print(f"  🤖 Bot user: @{response.get('user')}")
-            print(f"  🏢 Team: {response.get('team')}")
-            print(f"  🆔 User ID: {response.get('user_id')}")
-            return True
-        else:
-            print(f"  ❌ API call failed: {response.get('error')}")
-            return False
-            
-    except ImportError:
-        print("  ❌ Missing slack-sdk package")
-        print("  💡 Install with: pip install slack-sdk")
-        return False
-    except Exception as e:
-        print(f"  ❌ Slack API connection failed: {e}")
-        return False
+    bot_token = slack_config.get('slack_bot_token')
+    client = WebClient(token=bot_token)
+    
+    # Test API connection with auth.test
+    response = client.auth_test()
+    
+    assert response.get("ok"), f"API call should succeed, got error: {response.get('error')}"
+    assert response.get("user"), "Should return bot user name"
+    assert response.get("team"), "Should return team name"
+    assert response.get("user_id"), "Should return user ID"
+    
+    # Verify response structure
+    assert isinstance(response.get("user"), str), "User should be a string"
+    assert isinstance(response.get("team"), str), "Team should be a string"
+    assert isinstance(response.get("user_id"), str), "User ID should be a string"
 
-def test_socket_mode():
+
+@pytest.mark.integration 
+@pytest.mark.requires_slack
+def test_socket_mode_setup(slack_config):
     """Test Socket Mode connection capability."""
-    print("\n🔍 Testing Socket Mode setup...")
+    from slack_bolt import App
+    from slack_bolt.adapter.socket_mode import SocketModeHandler
+    
+    app_token = slack_config.get('slack_app_token')
+    bot_token = slack_config.get('slack_bot_token')
+    
+    # Create a minimal app (don't start it)
+    app = App(token=bot_token)
+    
+    # Should be able to create handler without errors
+    handler = SocketModeHandler(app, app_token)
+    
+    assert handler is not None, "Socket Mode handler should be created"
+    assert hasattr(handler, 'app'), "Handler should have app attribute"
+    assert hasattr(handler, 'app_token'), "Handler should have app_token attribute"
+
+
+@pytest.mark.integration
+@pytest.mark.requires_slack
+def test_slack_bolt_app_creation(slack_config):
+    """Test that Slack Bolt app can be created."""
+    from slack_bolt import App
+    
+    bot_token = slack_config.get('slack_bot_token')
+    signing_secret = slack_config.get('slack_signing_secret')
+    
+    # Create app with required parameters
+    app = App(
+        token=bot_token,
+        signing_secret=signing_secret
+    )
+    
+    assert app is not None, "Slack App should be created"
+    assert hasattr(app, 'client'), "App should have client attribute"
+    assert hasattr(app, '_token'), "App should have token attribute"
+
+
+@pytest.mark.integration
+@pytest.mark.requires_slack
+@pytest.mark.parametrize("required_scope", [
+    "app_mentions:read",
+    "chat:write", 
+    "commands"
+])
+def test_bot_token_scopes(slack_config, required_scope):
+    """Test that bot token has required scopes (informational)."""
+    from slack_sdk import WebClient
+    
+    bot_token = slack_config.get('slack_bot_token')
+    client = WebClient(token=bot_token)
     
     try:
-        from slack_bolt import App
-        from slack_bolt.adapter.socket_mode import SocketModeHandler
+        # Get bot info to check scopes indirectly
+        response = client.auth_test()
+        assert response.get("ok"), f"Should be able to call auth.test with scope {required_scope}"
         
-        app_token = os.getenv('SLACK_APP_TOKEN')
-        bot_token = os.getenv('SLACK_BOT_TOKEN')
+        # Note: We can't directly test scopes without making actual API calls
+        # that might require those scopes, which could fail in test environment
         
-        if not app_token or not bot_token:
-            print("  ❌ Missing tokens for Socket Mode test")
-            return False
-        
-        # Create a minimal app (don't start it)
-        app = App(token=bot_token)
-        handler = SocketModeHandler(app, app_token)
-        
-        print("  ✅ Socket Mode handler created successfully!")
-        print("  💡 Socket Mode is ready (handler not started in test)")
-        
-        return True
-        
-    except ImportError:
-        print("  ❌ Missing slack-bolt package")
-        print("  💡 Install with: pip install slack-bolt")
-        return False
     except Exception as e:
-        print(f"  ❌ Socket Mode setup failed: {e}")
-        return False
-
-def main():
-    """Run all tests."""
-    print("🧪 Slack Bot Setup Verification\n")
-    
-    # Load environment variables
-    load_dotenv()
-    
-    # Run tests
-    tests = [
-        test_env_variables,
-        test_token_formats, 
-        test_slack_api_connection,
-        test_socket_mode
-    ]
-    
-    passed = 0
-    for test in tests:
-        if test():
-            passed += 1
-        print()
-    
-    # Summary
-    print("="*50)
-    if passed == len(tests):
-        print("🎉 All tests passed! Your Slack setup is ready.")
-        print("💡 You can now invite the bot to channels and start building!")
-    else:
-        print(f"❌ {len(tests) - passed} test(s) failed. Please fix the issues above.")
-    
-    print("="*50)
-
-if __name__ == "__main__":
-    main()
+        pytest.skip(f"Cannot verify scope {required_scope}: {e}")

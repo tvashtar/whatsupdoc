@@ -28,6 +28,7 @@ whatsupdoc = "whatsupdoc.app:main"
 dev-dependencies = [
     "pytest>=7.4.0",
     "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
     "requests-mock>=1.11.0",
 ]
 
@@ -36,4 +37,22 @@ cloud-functions = [
     "functions-framework>=3.5.0",
     "google-cloud-aiplatform>=1.108.0",
     "cloudevents>=1.11.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+    "--disable-warnings"
+]
+markers = [
+    "integration: marks tests as integration tests (may be slow)",
+    "unit: marks tests as unit tests (fast)",
+    "requires_gcp: marks tests that require GCP credentials",
+    "requires_slack: marks tests that require Slack tokens"
 ]

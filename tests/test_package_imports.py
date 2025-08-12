@@ -1,57 +1,61 @@
-#!/usr/bin/env python3
 """
 Test that the whatsupdoc package can be imported correctly and all modules work.
 """
+import pytest
+import whatsupdoc
 
-def test_package_imports():
-    print("🧪 Testing Package Imports")
-    print()
+
+@pytest.mark.unit
+def test_main_package_import():
+    """Test that the main package can be imported and has version."""
+    assert hasattr(whatsupdoc, '__version__')
+    assert isinstance(whatsupdoc.__version__, str)
+    assert len(whatsupdoc.__version__) > 0
+
+
+@pytest.mark.unit
+def test_config_module_import():
+    """Test that config module imports and instantiates correctly."""
+    from whatsupdoc.config import Config
     
-    try:
-        # Test main package import
-        print("📦 Testing main package import...")
-        import whatsupdoc
-        print(f"  ✅ whatsupdoc package version: {whatsupdoc.__version__}")
-        
-        # Test configuration module
-        print("⚙️  Testing configuration module...")
-        from whatsupdoc.config import Config
-        config = Config()
-        print("  ✅ Config class imported and instantiated")
-        
-        # Test vertex search module
-        print("🔍 Testing vertex search module...")
-        from whatsupdoc.vertex_rag_client import VertexRAGClient, SearchResult
-        print("  ✅ VertexRAGClient and SearchResult imported")
-        
-        # Test gemini rag module
-        print("🤖 Testing Gemini RAG module...")
-        from whatsupdoc.gemini_rag import GeminiRAGService, RAGResponse
-        print("  ✅ GeminiRAGService and RAGResponse imported")
-        
-        # Test slack bot module
-        print("💬 Testing Slack bot module...")
-        from whatsupdoc.slack_bot import ResearchPaperBot
-        print("  ✅ ResearchPaperBot imported")
-        
-        # Test app entry point
-        print("🚀 Testing app entry point...")
-        from whatsupdoc.app import main
-        print("  ✅ Main entry point imported")
-        
-        print()
-        print("=" * 50)
-        print("🎉 All package imports successful!")
-        print("📦 Package structure is working correctly")
-        print("=" * 50)
-        return True
-        
-    except Exception as e:
-        print(f"❌ Import failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
+    # Should be able to instantiate without errors
+    config = Config()
+    assert config is not None
 
-if __name__ == "__main__":
-    success = test_package_imports()
-    exit(0 if success else 1)
+
+@pytest.mark.unit
+def test_vertex_rag_client_import():
+    """Test that vertex RAG client modules import correctly."""
+    from whatsupdoc.vertex_rag_client import VertexRAGClient, SearchResult
+    
+    # Classes should be importable and callable
+    assert callable(VertexRAGClient)
+    assert callable(SearchResult)
+
+
+@pytest.mark.unit  
+def test_gemini_rag_import():
+    """Test that Gemini RAG modules import correctly."""
+    from whatsupdoc.gemini_rag import GeminiRAGService, RAGResponse
+    
+    # Classes should be importable and callable
+    assert callable(GeminiRAGService)
+    assert callable(RAGResponse)
+
+
+@pytest.mark.unit
+def test_slack_bot_import():
+    """Test that Slack bot module imports correctly."""
+    from whatsupdoc.slack_bot import ResearchPaperBot
+    
+    # Class should be importable and callable
+    assert callable(ResearchPaperBot)
+
+
+@pytest.mark.unit
+def test_app_entry_point_import():
+    """Test that app entry point imports correctly."""
+    from whatsupdoc.app import main
+    
+    # Function should be importable and callable
+    assert callable(main)

@@ -1,123 +1,118 @@
-#!/usr/bin/env python3
 """
 Test script to verify GCP Vertex AI Search connection and configuration.
 Run this to make sure your GCP setup is working before building the full bot.
 """
 
 import os
+import pytest
 from dotenv import load_dotenv
 
-def test_env_variables():
-    """Test that all required environment variables are set."""
-    print("🔍 Testing environment variables...")
+# Load environment variables
+load_dotenv()
+
+
+@pytest.fixture
+def required_gcp_vars():
+    """Required GCP environment variables."""
+    return ['PROJECT_ID', 'LOCATION', 'RAG_CORPUS_ID']
+
+
+@pytest.fixture
+def gcp_config(required_gcp_vars):
+    """GCP configuration from environment variables."""
+    config = {}
+    missing_vars = []
     
-    required_vars = [
-        'PROJECT_ID',
-        'LOCATION', 
-        'RAG_CORPUS_ID'
-    ]
-    
-    missing = []
-    for var in required_vars:
+    for var in required_gcp_vars:
         value = os.getenv(var)
         if not value:
-            missing.append(var)
+            missing_vars.append(var)
         else:
-            print(f"  ✅ {var}: {value}")
+            config[var.lower()] = value
     
-    if missing:
-        print(f"  ❌ Missing variables: {', '.join(missing)}")
-        return False
+    if missing_vars:
+        pytest.skip(f"Missing required GCP environment variables: {', '.join(missing_vars)}")
     
-    print("  ✅ All GCP environment variables found!")
-    return True
+    return config
 
-def test_gcp_auth():
+
+@pytest.mark.integration
+@pytest.mark.requires_gcp
+def test_required_gcp_env_variables(required_gcp_vars):
+    """Test that all required GCP environment variables are set."""
+    missing_vars = []
+    
+    for var in required_gcp_vars:
+        value = os.getenv(var)
+        if not value:
+            missing_vars.append(var)
+    
+    assert not missing_vars, f"Missing required GCP environment variables: {', '.join(missing_vars)}"
+    
+    # Verify each variable has reasonable content
+    for var in required_gcp_vars:
+        value = os.getenv(var)
+        assert value and len(value.strip()) > 0, f"{var} should not be empty"
+
+
+@pytest.mark.integration 
+@pytest.mark.requires_gcp
+def test_gcp_authentication(gcp_config):
     """Test Google Cloud authentication."""
-    print("\n🔐 Testing Google Cloud authentication...")
+    from google.auth import default
     
-    try:
-        from google.auth import default
-        credentials, project = default()
-        print(f"  ✅ Successfully authenticated with project: {project}")
-        
-        # Verify the project matches our env var
-        env_project = os.getenv('PROJECT_ID')
-        if project != env_project:
-            print(f"  ⚠️  Warning: Authenticated project ({project}) != PROJECT_ID env var ({env_project})")
-        
-        return True
-    except Exception as e:
-        print(f"  ❌ Authentication failed: {e}")
-        print("  💡 Try running: gcloud auth application-default login")
-        return False
+    # Should be able to get default credentials
+    credentials, project = default()
+    
+    assert credentials is not None, "Should have valid credentials"
+    assert project is not None, "Should have a project ID"
+    assert isinstance(project, str), "Project ID should be a string"
+    assert len(project) > 0, "Project ID should not be empty"
+    
+    # Check if authenticated project matches environment variable
+    env_project = gcp_config.get('project_id')
+    if env_project and project != env_project:
+        # This is just a warning, not a failure
+        pytest.warns(UserWarning, f"Authenticated project ({project}) != PROJECT_ID env var ({env_project})")
 
-def test_vertex_rag_client():
+
+@pytest.mark.integration
+@pytest.mark.requires_gcp
+def test_vertex_rag_client_connection(gcp_config):
     """Test connection to Vertex AI RAG Engine."""
-    print("\n🔍 Testing Vertex AI RAG Engine connection...")
+    from whatsupdoc.vertex_rag_client import VertexRAGClient
     
-    try:
-        from whatsupdoc.vertex_rag_client import VertexRAGClient
-        
-        # Get configuration
-        project_id = os.getenv('PROJECT_ID')
-        location = os.getenv('LOCATION')  
-        rag_corpus_id = os.getenv('RAG_CORPUS_ID')
-        
-        print(f"  📍 Using RAG corpus: {rag_corpus_id}")
-        
-        # Initialize the client
-        client = VertexRAGClient(
-            project_id=project_id,
-            location=location,
-            rag_corpus_id=rag_corpus_id
-        )
-        
-        # Test connection
-        if client.test_connection():
-            print("  ✅ RAG Engine connection successful!")
-            return True
-        else:
-            print("  ❌ RAG Engine connection failed")
-            return False
-        
-    except ImportError:
-        print("  ❌ Missing required packages for RAG Engine")
-        print("  💡 Install with: uv sync")
-        return False
-    except Exception as e:
-        print(f"  ❌ RAG Engine connection failed: {e}")
-        print("  💡 Check your PROJECT_ID, LOCATION, and RAG_CORPUS_ID in .env")
-        return False
+    # Initialize the client
+    client = VertexRAGClient(
+        project_id=gcp_config['project_id'],
+        location=gcp_config['location'],
+        rag_corpus_id=gcp_config['rag_corpus_id']
+    )
+    
+    assert client is not None, "RAG client should be created successfully"
+    
+    # Test connection
+    connection_result = client.test_connection()
+    assert connection_result, "RAG Engine connection should succeed"
 
-def main():
-    """Run all tests."""
-    print("🧪 GCP Vertex AI RAG Engine Setup Verification\n")
-    
-    # Load environment variables
-    load_dotenv()
-    
-    # Run tests
-    tests = [
-        test_env_variables,
-        test_gcp_auth,
-        test_vertex_rag_client
-    ]
-    
-    passed = 0
-    for test in tests:
-        if test():
-            passed += 1
-        print()
-    
-    # Summary
-    print("="*50)
-    if passed == len(tests):
-        print("🎉 All tests passed! Your GCP setup is ready.")
-    else:
-        print(f"❌ {len(tests) - passed} test(s) failed. Please fix the issues above.")
-    
-    print("="*50)
 
-if __name__ == "__main__":
-    main()
+@pytest.mark.integration
+@pytest.mark.requires_gcp
+def test_vertex_rag_client_initialization(gcp_config):
+    """Test RAG client can be initialized with valid config."""
+    from whatsupdoc.vertex_rag_client import VertexRAGClient
+    
+    client = VertexRAGClient(
+        project_id=gcp_config['project_id'],
+        location=gcp_config['location'],
+        rag_corpus_id=gcp_config['rag_corpus_id']
+    )
+    
+    # Verify client attributes
+    assert hasattr(client, 'project_id'), "Client should have project_id attribute"
+    assert hasattr(client, 'location'), "Client should have location attribute"
+    assert hasattr(client, 'rag_corpus_id'), "Client should have rag_corpus_id attribute"
+    
+    assert client.project_id == gcp_config['project_id'], "Project ID should match config"
+    assert client.location == gcp_config['location'], "Location should match config"
+    assert client.rag_corpus_id == gcp_config['rag_corpus_id'], "RAG corpus ID should match config"
