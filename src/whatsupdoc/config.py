@@ -4,7 +4,7 @@
 import os
 from typing import Optional
 
-from pydantic import Field, validator
+from pydantic import Field, field_validator, ConfigDict
 from pydantic_settings import BaseSettings
 
 
@@ -25,7 +25,7 @@ class Config(BaseSettings):
 
     # Feature Configuration
     use_grounded_generation: bool = Field(default=True)
-    max_results: int = Field(default=5, ge=1, le=20)
+    max_results: int = Field(default=7, ge=1, le=20)
     response_timeout: int = Field(default=30, ge=5, le=120)
 
     # Bot Configuration
@@ -40,20 +40,23 @@ class Config(BaseSettings):
     max_context_length: int = Field(default=100000, ge=1000, le=1000000)
     answer_temperature: float = Field(default=0.1, ge=0.0, le=2.0)
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
-        extra = "ignore"  # Ignore extra environment variables
+    model_config = ConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore"  # Ignore extra environment variables
+    )
 
-    @validator("slack_app_token", always=True)
-    def validate_slack_app_token(cls, v, values):
+    @field_validator("slack_app_token", mode="before")
+    @classmethod
+    def validate_slack_app_token(cls, v):
         """App token required only if not running in Cloud Run."""
         if not os.getenv("PORT") and not v:
             raise ValueError("SLACK_APP_TOKEN required for Socket Mode")
         return v
 
-    @validator("project_id", "rag_corpus_id", "slack_bot_token", "slack_signing_secret")
+    @field_validator("project_id", "rag_corpus_id", "slack_bot_token", "slack_signing_secret", mode="before")
+    @classmethod
     def validate_required_fields(cls, v):
         if not v or not v.strip():
             raise ValueError("This field is required and cannot be empty")

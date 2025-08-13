@@ -297,7 +297,7 @@ class SlackBot:
                         "type": "section",
                         "text": {
                             "type": "mrkdwn",
-                            "text": f"```{result.snippet[:300]}{'...' if len(result.snippet) > 300 else ''}```",
+                            "text": f"```{result.content[:300]}{'...' if len(result.content) > 300 else ''}```",
                         },
                     },
                 ])

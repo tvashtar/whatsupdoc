@@ -69,7 +69,7 @@ class GeminiRAGService:
             total_length = 0
 
             for i, result in enumerate(search_results, 1):
-                chunk_text = f"[Source {i}: {result.title}]\n{result.snippet}\n"
+                chunk_text = f"[Source {i}: {result.title}]\n{result.content}\n"
                 if total_length + len(chunk_text) <= max_context_length:
                     context_parts.append(chunk_text)
                     total_length += len(chunk_text)

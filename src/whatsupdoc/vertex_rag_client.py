@@ -1,17 +1,12 @@
 #!/usr/bin/env python3
-"""Modern Vertex AI RAG integration using official SDK."""
+"""Modern Vertex AI RAG integration using REST API."""
 
 import asyncio
-import logging
 from dataclasses import dataclass
 from typing import Any
 
 import structlog
-from google.cloud import aiplatform
-from google.cloud.aiplatform_v1beta1 import VertexRagServiceClient
-from google.cloud.aiplatform_v1beta1.types.vertex_rag_service import RetrieveContextsRequest, RagQuery
-
-from .error_handler import ModernErrorHandler
+from google.auth import default
 
 logger = structlog.get_logger()
 
@@ -21,25 +16,31 @@ class SearchResult:
     """Modern search result with proper typing."""
 
     title: str
-    snippet: str
+    content: str  # Full chunk content (not just snippet)
     source_uri: str
     confidence_score: float
     metadata: dict[str, Any] | None = None
+    
+    # Backward compatibility property
+    @property
+    def snippet(self) -> str:
+        """Backward compatibility - returns full content."""
+        return self.content
 
 
 class VertexRAGClient:
-    """Modern Vertex AI RAG client using official SDK."""
+    """Modern Vertex AI RAG client using REST API."""
 
     def __init__(self, project_id: str, location: str, rag_corpus_id: str) -> None:
         self.project_id = project_id
         self.location = location
         self.rag_corpus_id = rag_corpus_id
 
-        # Initialize Vertex AI
-        aiplatform.init(project=project_id, location=location)
+        # Initialize authentication
+        self.credentials, _ = default()
 
-        # Use official RAG Service client
-        self.rag_client = VertexRagServiceClient()
+        # Build API endpoint
+        self.api_endpoint = f"https://{location}-aiplatform.googleapis.com"
 
         logger.info(
             "Initialized modern Vertex RAG client",
@@ -51,99 +52,141 @@ class VertexRAGClient:
     async def search_async(
         self,
         query: str,
-        max_results: int = 5,
+        max_results: int = 7,
         similarity_threshold: float = 0.3,
     ) -> list[SearchResult]:
-        """Modern async search using official Vertex AI SDK."""
+        """Modern async search using REST API."""
         try:
-            # Use the official RAG search API
-            parent = f"projects/{self.project_id}/locations/{self.location}"
-            
-            # Create VertexRagStore with the corpus and threshold
-            vertex_rag_store = RetrieveContextsRequest.VertexRagStore(
-                rag_corpora=[self.rag_corpus_id],
-                vector_distance_threshold=similarity_threshold,
-            )
+            import requests
+            from google.auth.transport.requests import Request
 
-            request = RetrieveContextsRequest(
-                parent=parent,
-                query=RagQuery(
-                    text=query,
-                    similarity_top_k=max_results,
-                ),
-                vertex_rag_store=vertex_rag_store,
-            )
+            # Refresh credentials if needed
+            self.credentials.refresh(Request())
+
+            # Build request payload (matching the working REST API structure)
+            request_body = {
+                "vertex_rag_store": {
+                    "rag_resources": [{"rag_corpus": self.rag_corpus_id}],
+                    "vector_distance_threshold": similarity_threshold,
+                },
+                "query": {"text": query, "similarity_top_k": max_results},
+            }
+
+            # Build API URL
+            url = f"{self.api_endpoint}/v1beta1/projects/{self.project_id}/locations/{self.location}:retrieveContexts"
+
+            headers = {
+                "Authorization": f"Bearer {self.credentials.token}",
+                "Content-Type": "application/json",
+            }
+
+            logger.info(f"Executing RAG search query: '{query}' with max_results: {max_results}")
 
             # Execute in thread pool to maintain async interface
             loop = asyncio.get_event_loop()
-            response = await loop.run_in_executor(
-                None, self.rag_client.retrieve_contexts, request
-            )
 
+            def sync_request():
+                response = requests.post(url, json=request_body, headers=headers, timeout=30)
+                response.raise_for_status()
+                return response.json()
+
+            response_data = await loop.run_in_executor(None, sync_request)
+
+            # Parse response and convert to SearchResult objects
             results = []
-            for context in response.contexts.contexts:
-                # Extract chunk data using proper SDK patterns
-                chunk_data = context.source_data_object
-                source_uri = context.source_uri or "unknown"
 
-                result = SearchResult(
-                    title=getattr(chunk_data, "display_name", None) or "Document Chunk",
-                    snippet=getattr(chunk_data, "text", ""),
-                    source_uri=source_uri,
-                    confidence_score=getattr(context, "distance", 0.8),  # Default relevance score
-                    metadata={
-                        "chunk_id": getattr(chunk_data, "name", None),
-                        "document_id": getattr(chunk_data, "document_id", None),
-                    },
-                )
-                results.append(result)
+            if "contexts" in response_data and "contexts" in response_data["contexts"]:
+                for i, context in enumerate(response_data["contexts"]["contexts"]):
+                    try:
+                        # Extract chunk content
+                        content = context.get("text", "")
+
+                        # Extract source metadata
+                        source_uri = context.get("sourceUri", "")
+                        title = context.get("sourceDisplayName", f"Document {i+1}")
+
+                        # Calculate confidence from relevance scores
+                        confidence_score = 0.8  # Default high confidence
+                        if "distance" in context:
+                            # Convert distance to confidence (lower distance = higher confidence)
+                            distance = float(context["distance"])
+                            confidence_score = max(0.1, min(1.0, 1.0 - distance))
+                        elif "score" in context:
+                            confidence_score = float(context["score"])
+
+                        # Extract additional metadata
+                        metadata = {
+                            "chunk_index": i,
+                            "rag_engine": True,
+                            "chunk_length": len(content),
+                        }
+
+                        if "chunk" in context:
+                            chunk_info = context["chunk"]
+                            if "pageSpan" in chunk_info:
+                                metadata["page_span"] = chunk_info["pageSpan"]
+
+                        search_result = SearchResult(
+                            title=title,
+                            content=content,  # Full chunk content for RAG
+                            source_uri=source_uri,
+                            confidence_score=confidence_score,
+                            metadata=metadata,
+                        )
+
+                        results.append(search_result)
+
+                    except Exception as e:
+                        logger.warning(f"Error processing RAG context {i}: {str(e)}")
+                        continue
 
             logger.info(
                 f"Retrieved {len(results)} chunks",
-                total_chars=sum(len(r.snippet) for r in results),
+                total_chars=sum(len(r.content) for r in results),
             )
             return results
 
         except Exception as e:
             logger.error("Vertex AI search failed", error=str(e), query=query)
-            
+
             # If RAG Engine is not implemented, return empty results for now
             # This allows the bot to continue functioning
             if "not implemented" in str(e).lower() or "501" in str(e):
                 logger.warning("RAG Engine not available, returning empty results")
                 return []
-            
+
             raise
 
     # Compatibility method for existing code
     async def search(
         self,
         query: str,
-        max_results: int = 5,
+        max_results: int = 7,
         vector_distance_threshold: float | None = None,
         vector_similarity_threshold: float | None = None,
         use_grounded_generation: bool = True,  # Keep for compatibility
     ) -> list[SearchResult]:
         """Search wrapper for backwards compatibility."""
-        similarity_threshold = vector_similarity_threshold or 0.3
+        # Note: use_grounded_generation kept for API compatibility but not used
+        similarity_threshold = vector_similarity_threshold or vector_distance_threshold or 0.3
         return await self.search_async(query, max_results, similarity_threshold)
 
     async def test_connection_async(self) -> bool:
         """Test the Vertex AI connection."""
         try:
             # Test by attempting to search with a simple query
-            results = await self.search_async("test", max_results=1)
+            _ = await self.search_async("test", max_results=1)
             logger.info("Vertex AI connection test successful")
             return True
         except Exception as e:
             logger.error("Vertex AI connection test failed", error=str(e))
-            
+
             # If RAG Engine is not implemented, consider connection "successful"
             # but without functional search capability
             if "not implemented" in str(e).lower() or "501" in str(e):
                 logger.warning("RAG Engine not available, but connection established")
                 return True
-                
+
             return False
 
     def test_connection(self) -> bool:

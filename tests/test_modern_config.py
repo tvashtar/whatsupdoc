@@ -28,25 +28,33 @@ def test_modern_config_validation():
 
 
 @pytest.mark.unit
-@pytest.mark.skip("Socket mode validation works at runtime, not at init")
 def test_modern_config_socket_mode():
     """Test config validation for Socket Mode."""
     from whatsupdoc.config import Config
     from pydantic import ValidationError
     
-    # Should require app token when PORT is not set (Socket Mode)
+    # Test that Pydantic validator catches missing app token in Socket Mode
+    # Set up environment without PORT (Socket Mode) and without SLACK_APP_TOKEN
     with patch.dict(os.environ, {
         "PROJECT_ID": "test-project",
         "RAG_CORPUS_ID": "test-corpus", 
         "SLACK_BOT_TOKEN": "xoxb-test",
         "SLACK_SIGNING_SECRET": "test-secret"
-        # No PORT env var = Socket Mode
+        # Explicitly exclude PORT and SLACK_APP_TOKEN to trigger Socket Mode validation
     }, clear=True):
-        # The validation works but doesn't raise at init time in current implementation
-        config = Config()
-        # Test the validation method instead
-        errors = config.validate()
-        assert any("SLACK_APP_TOKEN required for Socket Mode" in error for error in errors)
+        # Create a custom config class that skips .env file loading for this test
+        class TestConfig(Config):
+            model_config = {
+                **Config.model_config,
+                "env_file": None  # Disable .env file loading
+            }
+        
+        # Should raise ValidationError during creation due to missing SLACK_APP_TOKEN
+        with pytest.raises(ValidationError) as exc_info:
+            TestConfig()
+        
+        # Verify the error message contains our validation
+        assert "SLACK_APP_TOKEN required for Socket Mode" in str(exc_info.value)
 
 
 @pytest.mark.unit
