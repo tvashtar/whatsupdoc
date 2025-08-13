@@ -113,6 +113,9 @@ class SlackBot:
         loading_response = respond_func({
             "text": f"🔍 Searching for: `{clean_query}`..."
         })
+        
+        # Extract timestamp for potential updates (may be None for webhooks)
+        loading_ts = self._extract_timestamp(loading_response)
 
         try:
             # Search with modern error handling
@@ -133,31 +136,71 @@ class SlackBot:
 
                 response_blocks = self._format_rag_response(clean_query, rag_response)
 
-                # Update loading message
-                client.chat_update(
-                    channel=channel_id,
-                    ts=loading_response.get("ts"),
-                    blocks=response_blocks,
-                    text=f"Generated answer for: {clean_query}",
-                )
+                # Update loading message if timestamp is available
+                if loading_ts:
+                    client.chat_update(
+                        channel=channel_id,
+                        ts=loading_ts,
+                        blocks=response_blocks,
+                        text=f"Generated answer for: {clean_query}",
+                    )
+                else:
+                    # For webhook responses, send a new message instead of updating
+                    respond_func({
+                        "blocks": response_blocks,
+                        "text": f"Generated answer for: {clean_query}",
+                    })
             else:
                 # Handle no results case
-                client.chat_update(
-                    channel=channel_id,
-                    ts=loading_response.get("ts"),
-                    text=f"🤔 No relevant documents found for: `{clean_query}`",
-                )
+                if loading_ts:
+                    client.chat_update(
+                        channel=channel_id,
+                        ts=loading_ts,
+                        text=f"🤔 No relevant documents found for: `{clean_query}`",
+                    )
+                else:
+                    # For webhook responses, send a new message instead of updating
+                    respond_func({
+                        "text": f"🤔 No relevant documents found for: `{clean_query}`",
+                    })
 
         except Exception as e:
             error_context = {"query": clean_query, "user_id": user_id}
             error_message = ModernErrorHandler.handle_rag_error(e, error_context)
 
-            client.chat_update(
-                channel=channel_id,
-                ts=loading_response.get("ts"),
-                text=error_message,
-            )
+            if loading_ts:
+                client.chat_update(
+                    channel=channel_id,
+                    ts=loading_ts,
+                    text=error_message,
+                )
+            else:
+                # For webhook responses, send a new message instead of updating
+                respond_func({
+                    "text": error_message,
+                })
 
+    def _extract_timestamp(self, response: Any) -> Optional[str]:
+        """Extract timestamp from different Slack response types.
+        
+        Args:
+            response: Could be WebhookResponse (from respond function in slash commands)
+                     or dict (from say function in mentions/DMs)
+        
+        Returns:
+            Timestamp string if available, None otherwise
+        """
+        if hasattr(response, 'body'):
+            # WebhookResponse object - no ts available since it's for initial response
+            # For webhooks, we can't update the message since there's no ts
+            return None
+        elif isinstance(response, dict):
+            # Dictionary response (from say function) - has ts field
+            return response.get("ts")
+        else:
+            # Unknown response type
+            return None
+    
     def _clean_query(self, text: str) -> str:
         """Clean and normalize query text."""
         import re
@@ -293,6 +336,29 @@ class SlackBot:
 
         return blocks
 
+    def get_flask_app(self) -> Flask:
+        """Create and return Flask app for WSGI deployment."""
+        flask_app = Flask(__name__)
+        handler = SlackRequestHandler(self.app)
+
+        @flask_app.route("/slack/events", methods=["POST"])
+        def slack_events():
+            return handler.handle(request)
+
+        @flask_app.route("/health", methods=["GET"])
+        def health_check():
+            return {"status": "healthy", "service": "whatsupdoc"}, 200
+
+        @flask_app.route("/", methods=["GET"])
+        def root():
+            return {
+                "status": "running", 
+                "service": "whatsupdoc-slack-bot",
+                "version": "modernized"
+            }, 200
+
+        return flask_app
+
     async def start_async(self) -> None:
         """Async startup with proper resource management."""
         # Test connections
@@ -325,15 +391,37 @@ class SlackBot:
             handler.start()
 
     async def _test_connections(self) -> None:
-        """Test all external connections."""
+        """Test all external connections with graceful degradation."""
+        services_available = []
+        
         # Test Vertex AI connection
-        if not await self.search_client.test_connection_async():
-            raise ConnectionError("Cannot connect to Vertex AI RAG Engine")
+        try:
+            if await self.search_client.test_connection_async():
+                services_available.append("Vertex AI RAG")
+                logger.info("Vertex AI RAG Engine: ✅ Connected")
+            else:
+                logger.warning("Vertex AI RAG Engine: ⚠️ Not available, will return empty search results")
+        except Exception as e:
+            logger.warning("Vertex AI RAG Engine: ❌ Connection failed", error=str(e))
 
-        # Test Gemini connection
-        if self.rag_service and not await self.rag_service.test_connection_async():
-            logger.warning("Gemini connection failed, using search-only mode")
-            self.rag_service = None
+        # Test Gemini connection 
+        if self.rag_service:
+            try:
+                if await self.rag_service.test_connection_async():
+                    services_available.append("Gemini AI")
+                    logger.info("Gemini AI: ✅ Connected")
+                else:
+                    logger.warning("Gemini AI: ⚠️ Not available, disabling answer generation")
+                    self.rag_service = None
+            except Exception as e:
+                logger.warning("Gemini AI: ❌ Connection failed, disabling answer generation", error=str(e))
+                self.rag_service = None
+        
+        # Bot can operate with degraded functionality
+        if not services_available:
+            logger.warning("All AI services unavailable - bot will operate with basic functionality")
+        else:
+            logger.info(f"Bot ready with: {', '.join(services_available)}")
 
     def start(self) -> None:
         """Sync wrapper for starting the bot."""
