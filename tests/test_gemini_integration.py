@@ -48,7 +48,6 @@ def gemini_service(config):
         project_id=config.project_id,
         location=config.location,
         model=config.gemini_model,
-        api_key=config.gemini_api_key if not config.use_vertex_ai else None,
         use_vertex_ai=config.use_vertex_ai,
         temperature=config.answer_temperature
     )

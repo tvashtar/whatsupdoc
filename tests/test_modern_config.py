@@ -9,7 +9,7 @@ from unittest.mock import patch
 @pytest.mark.unit
 def test_modern_config_validation():
     """Test modern config validation with Pydantic."""
-    from whatsupdoc.modern_config import ModernConfig
+    from whatsupdoc.config import Config
     
     # Test with valid configuration (clear environment first)
     with patch.dict(os.environ, {
@@ -19,7 +19,7 @@ def test_modern_config_validation():
         "SLACK_SIGNING_SECRET": "test-secret",
         "PORT": "8080"  # Cloud Run mode, no app token needed
     }, clear=True):
-        config = ModernConfig()
+        config = Config()
         assert config.project_id == "test-project"
         assert config.rag_corpus_id == "test-corpus"
         assert config.slack_bot_token == "xoxb-test"
@@ -31,7 +31,7 @@ def test_modern_config_validation():
 @pytest.mark.skip("Socket mode validation works at runtime, not at init")
 def test_modern_config_socket_mode():
     """Test config validation for Socket Mode."""
-    from whatsupdoc.modern_config import ModernConfig
+    from whatsupdoc.config import Config
     from pydantic import ValidationError
     
     # Should require app token when PORT is not set (Socket Mode)
@@ -43,7 +43,7 @@ def test_modern_config_socket_mode():
         # No PORT env var = Socket Mode
     }, clear=True):
         # The validation works but doesn't raise at init time in current implementation
-        config = ModernConfig()
+        config = Config()
         # Test the validation method instead
         errors = config.validate()
         assert any("SLACK_APP_TOKEN required for Socket Mode" in error for error in errors)
@@ -52,7 +52,7 @@ def test_modern_config_socket_mode():
 @pytest.mark.unit
 def test_modern_config_field_validation():
     """Test field validation and constraints."""
-    from whatsupdoc.modern_config import ModernConfig
+    from whatsupdoc.config import Config
     from pydantic import ValidationError
     
     with patch.dict(os.environ, {
@@ -65,7 +65,7 @@ def test_modern_config_field_validation():
         "ANSWER_TEMPERATURE": "3.0"  # Above max limit of 2.0
     }):
         with pytest.raises(ValidationError) as exc_info:
-            ModernConfig()
+            Config()
         
         errors = str(exc_info.value)
         assert "Input should be less than or equal to 20" in errors
@@ -75,7 +75,7 @@ def test_modern_config_field_validation():
 @pytest.mark.unit
 def test_modern_config_defaults():
     """Test default values."""
-    from whatsupdoc.modern_config import ModernConfig
+    from whatsupdoc.config import Config
     
     with patch.dict(os.environ, {
         "PROJECT_ID": "test-project",
@@ -84,7 +84,7 @@ def test_modern_config_defaults():
         "SLACK_SIGNING_SECRET": "test-secret", 
         "PORT": "8080"
     }, clear=True):
-        config = ModernConfig()
+        config = Config()
         
         # Test defaults
         assert config.location == "us-central1"

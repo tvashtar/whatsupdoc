@@ -4,7 +4,7 @@
 
 set -e
 
-echo "🚀 Deploying WhatsUpDoc to Cloud Run..."
+echo "🚀 Deploying WhatsUpDoc to Cloud Run (modernized version)..."
 
 # Check if .env exists
 if [ ! -f ".env" ]; then

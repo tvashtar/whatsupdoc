@@ -1,42 +1,66 @@
+#!/usr/bin/env python3
+"""Modern configuration using Pydantic for validation."""
+
 import os
+from typing import Optional
+
+from pydantic import Field, validator
+from pydantic_settings import BaseSettings
 
 
-class Config:
-    def __init__(self) -> None:
-        # GCP Settings - RAG Engine Configuration
-        self.project_id = os.getenv("PROJECT_ID", "")
-        self.location = os.getenv("LOCATION", "us-central1")
-        self.rag_corpus_id = os.getenv("RAG_CORPUS_ID", "")
+class Config(BaseSettings):
+    """Type-safe configuration with validation."""
 
-        # Slack Settings
-        self.slack_bot_token = os.getenv("SLACK_BOT_TOKEN", "")
-        self.slack_signing_secret = os.getenv("SLACK_SIGNING_SECRET", "")
-        self.slack_app_token = os.getenv("SLACK_APP_TOKEN", "")
+    # GCP Settings
+    project_id: str = Field(..., description="Google Cloud Project ID")
+    location: str = Field(default="us-central1", description="GCP region")
+    rag_corpus_id: str = Field(..., description="Vertex AI RAG Corpus ID")
 
-        # Feature Configuration
-        self.use_grounded_generation = os.getenv("USE_GROUNDED_GENERATION", "True").lower() == "true"
-        self.max_results = int(os.getenv("MAX_RESULTS", "5"))
-        self.response_timeout = int(os.getenv("RESPONSE_TIMEOUT", "30"))
+    # Slack Settings
+    slack_bot_token: str = Field(..., description="Slack Bot Token")
+    slack_signing_secret: str = Field(..., description="Slack Signing Secret")
+    slack_app_token: Optional[str] = Field(
+        default=None, description="Slack App Token for Socket Mode"
+    )
 
-        # Bot Configuration
-        self.bot_name = os.getenv("BOT_NAME", "KnowledgeBot")
-        self.rate_limit_per_user = int(os.getenv("RATE_LIMIT_PER_USER", "10"))
-        self.rate_limit_window = int(os.getenv("RATE_LIMIT_WINDOW", "60"))
+    # Feature Configuration
+    use_grounded_generation: bool = Field(default=True)
+    max_results: int = Field(default=5, ge=1, le=20)
+    response_timeout: int = Field(default=30, ge=5, le=120)
 
-        # Google Cloud Authentication
-        self.google_credentials_path: str | None = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+    # Bot Configuration
+    bot_name: str = Field(default="KnowledgeBot")
+    rate_limit_per_user: int = Field(default=10, ge=1, le=100)
+    rate_limit_window: int = Field(default=60, ge=30, le=3600)
 
-        # Gemini Settings
-        self.gemini_model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
-        self.gemini_api_key = os.getenv("GEMINI_API_KEY", "")
-        self.use_vertex_ai = os.getenv("USE_VERTEX_AI", "True").lower() == "true"
+    # Gemini Settings
+    gemini_model: str = Field(default="gemini-2.5-flash-lite")
+    use_vertex_ai: bool = Field(default=True)
+    enable_rag_generation: bool = Field(default=True)
+    max_context_length: int = Field(default=100000, ge=1000, le=1000000)
+    answer_temperature: float = Field(default=0.1, ge=0.0, le=2.0)
 
-        # RAG Generation Settings
-        self.enable_rag_generation = os.getenv("ENABLE_RAG_GENERATION", "True").lower() == "true"
-        self.max_context_length = int(os.getenv("MAX_CONTEXT_LENGTH", "100000"))
-        self.answer_temperature = float(os.getenv("ANSWER_TEMPERATURE", "0.3"))
+    class Config:
+        env_file = ".env"
+        env_file_encoding = "utf-8"
+        case_sensitive = False
+        extra = "ignore"  # Ignore extra environment variables
+
+    @validator("slack_app_token", always=True)
+    def validate_slack_app_token(cls, v, values):
+        """App token required only if not running in Cloud Run."""
+        if not os.getenv("PORT") and not v:
+            raise ValueError("SLACK_APP_TOKEN required for Socket Mode")
+        return v
+
+    @validator("project_id", "rag_corpus_id", "slack_bot_token", "slack_signing_secret")
+    def validate_required_fields(cls, v):
+        if not v or not v.strip():
+            raise ValueError("This field is required and cannot be empty")
+        return v.strip()
 
     def validate(self) -> list[str]:
+        """Additional validation for backwards compatibility."""
         errors = []
 
         if not self.project_id:

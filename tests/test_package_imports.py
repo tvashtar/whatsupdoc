@@ -46,10 +46,10 @@ def test_gemini_rag_import():
 @pytest.mark.unit
 def test_slack_bot_import():
     """Test that Slack bot module imports correctly."""
-    from whatsupdoc.slack_bot import ResearchPaperBot
+    from whatsupdoc.slack_bot import SlackBot
 
     # Class should be importable and callable
-    assert callable(ResearchPaperBot)
+    assert callable(SlackBot)
 
 
 @pytest.mark.unit
