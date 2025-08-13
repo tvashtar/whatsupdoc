@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
-"""
-whatsupdoc - Slack RAG Chatbot Entry Point
+"""whatsupdoc - Slack RAG Chatbot Entry Point
 
 This module provides the main entry point for the whatsupdoc Slack bot.
 It handles initialization, environment setup, and bot startup.
 """
 
 from dotenv import load_dotenv
+
 from whatsupdoc.slack_bot import ResearchPaperBot
 
 
-def main():
+def main() -> None:
     """Main entry point for the whatsupdoc Slack bot."""
     # Load environment variables
     load_dotenv()
-    
+
     print("🌟 Starting whatsupdoc RAG chatbot...")
     try:
         bot = ResearchPaperBot()

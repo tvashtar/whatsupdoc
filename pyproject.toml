@@ -12,13 +12,16 @@ authors = [
     {name = "whatsupdoc", email = "noreply@example.com"}
 ]
 dependencies = [
-    "python-dotenv>=1.0.0",
-    "google-auth>=2.23.0",
-    "google-genai>=0.1.0",
-    "slack-bolt>=1.18.0",
-    "requests>=2.28.0",
-    "structlog>=23.1.0",
-    "flask>=3.0.0",
+    "python-dotenv>=1.0.1",
+    "google-auth>=2.40.3",
+    "google-cloud-aiplatform>=1.95.1",
+    "google-genai>=1.29.0",
+    "slack-bolt>=1.20.1",
+    "requests>=2.32.0",
+    "structlog>=24.1.0",
+    "flask>=3.1.1",
+    "pydantic>=2.9.0",
+    "tenacity>=9.0.0",
 ]
 
 [project.scripts]
@@ -26,10 +29,14 @@ whatsupdoc = "whatsupdoc.app:main"
 
 [tool.uv]
 dev-dependencies = [
-    "pytest>=7.4.0",
-    "pytest-asyncio>=0.21.0",
-    "pytest-cov>=4.0.0",
-    "requests-mock>=1.11.0",
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "pytest-mock>=3.14.0",
+    "requests-mock>=1.12.0",
+    "ruff>=0.8.0",
+    "mypy>=1.13.0",
+    "types-requests>=2.32.0",
 ]
 
 [project.optional-dependencies]
@@ -56,3 +63,17 @@ markers = [
     "requires_gcp: marks tests that require GCP credentials",
     "requires_slack: marks tests that require Slack tokens"
 ]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "C", "I", "N", "D", "UP", "ANN"]
+ignore = ["D100", "D104"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
