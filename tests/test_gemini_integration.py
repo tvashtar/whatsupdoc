@@ -131,10 +131,10 @@ async def test_full_rag_pipeline(search_client, gemini_service, config):
         "process",
         "management"
     ]
-    
+
     results = None
     test_query = None
-    
+
     # Try different queries until we find results
     for query in test_queries:
         test_query = query
@@ -178,7 +178,7 @@ async def test_full_rag_pipeline(search_client, gemini_service, config):
 @pytest.mark.requires_gcp
 @pytest.mark.parametrize("query", [
     "policy",
-    "process", 
+    "process",
     "information"
 ])
 @pytest.mark.asyncio

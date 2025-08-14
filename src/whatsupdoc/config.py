@@ -2,9 +2,8 @@
 """Modern configuration using Pydantic for validation."""
 
 import os
-from typing import Optional
 
-from pydantic import Field, field_validator, ConfigDict
+from pydantic import ConfigDict, Field, field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -19,7 +18,7 @@ class Config(BaseSettings):
     # Slack Settings
     slack_bot_token: str = Field(..., description="Slack Bot Token")
     slack_signing_secret: str = Field(..., description="Slack Signing Secret")
-    slack_app_token: Optional[str] = Field(
+    slack_app_token: str | None = Field(
         default=None, description="Slack App Token for Socket Mode"
     )
 

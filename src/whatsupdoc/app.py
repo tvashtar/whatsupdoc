@@ -25,7 +25,7 @@ def main() -> None:
         print(f"💥 Bot startup failed: {e}")
         import traceback
         traceback.print_exc()
-        
+
         # Try to provide helpful error messages
         error_str = str(e).lower()
         if "connection" in error_str:
@@ -34,7 +34,7 @@ def main() -> None:
             print("\n💡 Check your Slack tokens in the .env file")
         elif "environment" in error_str or "config" in error_str:
             print("\n💡 Check your environment variables configuration")
-        
+
         raise
 
 

@@ -20,7 +20,7 @@ class SearchResult:
     source_uri: str
     confidence_score: float
     metadata: dict[str, Any] | None = None
-    
+
     # Backward compatibility property
     @property
     def snippet(self) -> str:

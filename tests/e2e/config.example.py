@@ -23,5 +23,5 @@ TEST_QUERIES = [
 
 # Test user/channel IDs (these are fake - safe to commit)
 FAKE_USER_ID = "U2147483697"
-FAKE_CHANNEL_ID = "C2147483705" 
+FAKE_CHANNEL_ID = "C2147483705"
 FAKE_DM_CHANNEL_ID = "D0LAN2Q65"

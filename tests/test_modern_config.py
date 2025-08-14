@@ -2,15 +2,16 @@
 """Tests for modern Pydantic configuration."""
 
 import os
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 
 @pytest.mark.unit
 def test_modern_config_validation():
     """Test modern config validation with Pydantic."""
     from whatsupdoc.config import Config
-    
+
     # Test with valid configuration (clear environment first)
     with patch.dict(os.environ, {
         "PROJECT_ID": "test-project",
@@ -29,14 +30,15 @@ def test_modern_config_validation():
 @pytest.mark.unit
 def test_modern_config_socket_mode():
     """Test config validation for Socket Mode."""
-    from whatsupdoc.config import Config
     from pydantic import ValidationError
-    
+
+    from whatsupdoc.config import Config
+
     # Test that Pydantic validator catches missing app token in Socket Mode
     # Set up environment without PORT (Socket Mode) and without SLACK_APP_TOKEN
     with patch.dict(os.environ, {
         "PROJECT_ID": "test-project",
-        "RAG_CORPUS_ID": "test-corpus", 
+        "RAG_CORPUS_ID": "test-corpus",
         "SLACK_BOT_TOKEN": "xoxb-test",
         "SLACK_SIGNING_SECRET": "test-secret"
         # Explicitly exclude PORT and SLACK_APP_TOKEN to trigger Socket Mode validation
@@ -47,11 +49,11 @@ def test_modern_config_socket_mode():
                 **Config.model_config,
                 "env_file": None  # Disable .env file loading
             }
-        
+
         # Should raise ValidationError during creation due to missing SLACK_APP_TOKEN
         with pytest.raises(ValidationError) as exc_info:
             TestConfig()
-        
+
         # Verify the error message contains our validation
         assert "SLACK_APP_TOKEN required for Socket Mode" in str(exc_info.value)
 
@@ -59,13 +61,14 @@ def test_modern_config_socket_mode():
 @pytest.mark.unit
 def test_modern_config_field_validation():
     """Test field validation and constraints."""
-    from whatsupdoc.config import Config
     from pydantic import ValidationError
-    
+
+    from whatsupdoc.config import Config
+
     with patch.dict(os.environ, {
         "PROJECT_ID": "test-project",
         "RAG_CORPUS_ID": "test-corpus",
-        "SLACK_BOT_TOKEN": "xoxb-test", 
+        "SLACK_BOT_TOKEN": "xoxb-test",
         "SLACK_SIGNING_SECRET": "test-secret",
         "PORT": "8080",
         "MAX_RESULTS": "25",  # Above max limit of 20
@@ -73,7 +76,7 @@ def test_modern_config_field_validation():
     }):
         with pytest.raises(ValidationError) as exc_info:
             Config()
-        
+
         errors = str(exc_info.value)
         assert "Input should be less than or equal to 20" in errors
         assert "Input should be less than or equal to 2" in errors
@@ -83,16 +86,16 @@ def test_modern_config_field_validation():
 def test_modern_config_defaults():
     """Test default values."""
     from whatsupdoc.config import Config
-    
+
     with patch.dict(os.environ, {
         "PROJECT_ID": "test-project",
         "RAG_CORPUS_ID": "test-corpus",
         "SLACK_BOT_TOKEN": "xoxb-test",
-        "SLACK_SIGNING_SECRET": "test-secret", 
+        "SLACK_SIGNING_SECRET": "test-secret",
         "PORT": "8080"
     }, clear=True):
         config = Config()
-        
+
         # Test defaults
         assert config.location == "us-central1"
         assert config.use_grounded_generation == True

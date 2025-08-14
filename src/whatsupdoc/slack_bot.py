@@ -3,7 +3,7 @@
 
 import asyncio
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import structlog
 from flask import Flask, request
@@ -14,13 +14,13 @@ from slack_bolt.adapter.socket_mode import SocketModeHandler
 from .config import Config
 from .error_handler import ModernErrorHandler
 from .gemini_rag import GeminiRAGService, RAGResponse
-from .vertex_rag_client import VertexRAGClient, SearchResult
+from .vertex_rag_client import VertexRAGClient
 
 logger = structlog.get_logger()
 
 # Rate limiting storage (simple in-memory for now)
-user_query_count: Dict[str, int] = {}
-user_last_reset: Dict[str, float] = {}
+user_query_count: dict[str, int] = {}
+user_last_reset: dict[str, float] = {}
 
 
 class SlackBot:
@@ -50,7 +50,7 @@ class SlackBot:
         )
 
         # Initialize Gemini RAG service if enabled
-        self.rag_service: Optional[GeminiRAGService] = None
+        self.rag_service: GeminiRAGService | None = None
         if self.config.enable_rag_generation:
             self.rag_service = GeminiRAGService(
                 project_id=self.config.project_id,
@@ -86,7 +86,7 @@ class SlackBot:
                 asyncio.run(self._handle_query_async(message, say, client, message["text"]))
 
     async def _handle_query_async(
-        self, event_data: Dict[str, Any], respond_func, client, query_text: str
+        self, event_data: dict[str, Any], respond_func, client, query_text: str
     ) -> None:
         """Modern async query handler with proper error handling."""
         user_id = event_data.get("user") or event_data.get("user_id")
@@ -97,7 +97,7 @@ class SlackBot:
         # Rate limiting check
         if not await self._check_rate_limit_async(user_id):
             respond_func({
-                "text": f"⚠️ Rate limit exceeded. Please wait before trying again."
+                "text": "⚠️ Rate limit exceeded. Please wait before trying again."
             })
             return
 
@@ -113,7 +113,7 @@ class SlackBot:
         loading_response = respond_func({
             "text": f"🔍 Searching for: `{clean_query}`..."
         })
-        
+
         # Extract timestamp for potential updates (may be None for webhooks)
         loading_ts = self._extract_timestamp(loading_response)
 
@@ -180,7 +180,7 @@ class SlackBot:
                     "text": error_message,
                 })
 
-    def _extract_timestamp(self, response: Any) -> Optional[str]:
+    def _extract_timestamp(self, response: Any) -> str | None:
         """Extract timestamp from different Slack response types.
         
         Args:
@@ -189,6 +189,7 @@ class SlackBot:
         
         Returns:
             Timestamp string if available, None otherwise
+
         """
         if hasattr(response, 'body'):
             # WebhookResponse object - no ts available since it's for initial response
@@ -200,7 +201,7 @@ class SlackBot:
         else:
             # Unknown response type
             return None
-    
+
     def _clean_query(self, text: str) -> str:
         """Clean and normalize query text."""
         import re
@@ -240,7 +241,7 @@ class SlackBot:
         user_query_count[user_id] = current_count + 1
         return True
 
-    def _format_rag_response(self, query: str, rag_response: RAGResponse) -> List[Dict[str, Any]]:
+    def _format_rag_response(self, query: str, rag_response: RAGResponse) -> list[dict[str, Any]]:
         """Format a comprehensive RAG response with generated answer and sources."""
         confidence_emoji = (
             "🟢"
@@ -276,12 +277,12 @@ class SlackBot:
                     doc_counts[filename] = doc_counts.get(filename, 0) + 1
                 else:
                     doc_counts[result.title] = doc_counts.get(result.title, 0) + 1
-            
+
             # Create source summary
             source_summary = []
             for doc, count in sorted(doc_counts.items(), key=lambda x: x[1], reverse=True):
                 source_summary.append(f"📄 {doc} ({count})")
-            
+
             # Get top result for snippet
             top_result = rag_response.sources[0]
             top_confidence_emoji = (
@@ -295,7 +296,7 @@ class SlackBot:
                 {
                     "type": "section",
                     "text": {
-                        "type": "mrkdwn", 
+                        "type": "mrkdwn",
                         "text": f"📚 *Sources ({len(rag_response.sources)} chunks):*\n" + " • ".join(source_summary[:3]) + ("..." if len(source_summary) > 3 else "")
                     }
                 },
@@ -340,7 +341,7 @@ class SlackBot:
         @flask_app.route("/", methods=["GET"])
         def root():
             return {
-                "status": "running", 
+                "status": "running",
                 "service": "whatsupdoc-slack-bot",
                 "version": "modernized"
             }, 200
@@ -381,7 +382,7 @@ class SlackBot:
     async def _test_connections(self) -> None:
         """Test all external connections with graceful degradation."""
         services_available = []
-        
+
         # Test Vertex AI connection
         try:
             if await self.search_client.test_connection_async():
@@ -392,7 +393,7 @@ class SlackBot:
         except Exception as e:
             logger.warning("Vertex AI RAG Engine: ❌ Connection failed", error=str(e))
 
-        # Test Gemini connection 
+        # Test Gemini connection
         if self.rag_service:
             try:
                 if await self.rag_service.test_connection_async():
@@ -404,7 +405,7 @@ class SlackBot:
             except Exception as e:
                 logger.warning("Gemini AI: ❌ Connection failed, disabling answer generation", error=str(e))
                 self.rag_service = None
-        
+
         # Bot can operate with degraded functionality
         if not services_available:
             logger.warning("All AI services unavailable - bot will operate with basic functionality")
