@@ -21,5 +21,5 @@ ENV PORT=8080
 # Cloud Run expects the app to listen on PORT
 EXPOSE 8080
 
-# Use production WSGI server for Cloud Run
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "2", "--timeout", "60", "--preload", "wsgi:application"]
+# Use production WSGI server for Cloud Run with uv
+CMD ["uv", "run", "gunicorn", "--bind", "0.0.0.0:8080", "--workers", "2", "--timeout", "60", "--preload", "wsgi:application"]
