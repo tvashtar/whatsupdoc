@@ -12,7 +12,7 @@ load_dotenv()
 
 def create_app() -> Flask:
     """Create and configure the Flask app for WSGI deployment."""
-    from whatsupdoc.slack_bot import SlackBot
+    from whatsupdoc.slack.slack_bot import SlackBot
 
     # Initialize the bot (this creates the Flask app internally)
     bot = SlackBot()

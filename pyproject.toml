@@ -27,7 +27,7 @@ dependencies = [
 ]
 
 [project.scripts]
-whatsupdoc = "whatsupdoc.app:main"
+whatsupdoc = "whatsupdoc.slack.app:main"
 
 [tool.uv]
 dev-dependencies = [

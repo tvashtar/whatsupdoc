@@ -16,7 +16,7 @@ def main() -> None:
 
     print("🚀 Starting whatsupdoc RAG chatbot (modernized)...")
     try:
-        from whatsupdoc.slack_bot import SlackBot
+        from whatsupdoc.slack.slack_bot import SlackBot
 
         bot = SlackBot()
         bot.start()

@@ -7,7 +7,7 @@ import pytest
 @pytest.mark.unit
 def test_error_handler_slack_errors() -> None:
     """Test error handler for Slack-specific errors."""
-    from whatsupdoc.error_handler import ModernErrorHandler
+    from whatsupdoc.core.error_handler import ModernErrorHandler
 
     # Test rate limit error
     rate_limit_error = Exception("rate_limited")
@@ -28,7 +28,7 @@ def test_error_handler_slack_errors() -> None:
 @pytest.mark.unit
 def test_error_handler_rag_errors() -> None:
     """Test error handler for RAG-specific errors."""
-    from whatsupdoc.error_handler import ModernErrorHandler
+    from whatsupdoc.core.error_handler import ModernErrorHandler
 
     # Test quota error
     quota_error = Exception("quota exceeded")

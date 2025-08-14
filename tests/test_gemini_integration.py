@@ -6,9 +6,9 @@ import pytest
 from dotenv import load_dotenv
 
 if TYPE_CHECKING:
-    from whatsupdoc.config import Config
-    from whatsupdoc.gemini_rag import GeminiRAGService
-    from whatsupdoc.vertex_rag_client import VertexRAGClient
+    from whatsupdoc.core.config import Config
+    from whatsupdoc.core.gemini_rag import GeminiRAGService
+    from whatsupdoc.core.vertex_rag_client import VertexRAGClient
 
 # Load environment variables
 load_dotenv()
@@ -17,7 +17,7 @@ load_dotenv()
 @pytest.fixture
 def config() -> "Config":
     """Create and validate configuration."""
-    from whatsupdoc.config import Config
+    from whatsupdoc.core.config import Config
 
     config = Config()
     errors = config.validate_config()
@@ -31,7 +31,7 @@ def config() -> "Config":
 @pytest.fixture
 def search_client(config: "Config") -> "VertexRAGClient":
     """Create RAG search client."""
-    from whatsupdoc.vertex_rag_client import VertexRAGClient
+    from whatsupdoc.core.vertex_rag_client import VertexRAGClient
 
     client = VertexRAGClient(
         project_id=config.project_id, location=config.location, rag_corpus_id=config.rag_corpus_id
@@ -46,7 +46,7 @@ def search_client(config: "Config") -> "VertexRAGClient":
 @pytest.fixture
 def gemini_service(config: "Config") -> "GeminiRAGService":
     """Create Gemini RAG service."""
-    from whatsupdoc.gemini_rag import GeminiRAGService
+    from whatsupdoc.core.gemini_rag import GeminiRAGService
 
     service = GeminiRAGService(
         project_id=config.project_id,

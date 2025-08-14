@@ -3,6 +3,7 @@
 
 import asyncio
 import os
+import threading
 from collections.abc import Callable
 from typing import Any
 
@@ -13,10 +14,10 @@ from slack_bolt.adapter.flask import SlackRequestHandler
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from slack_sdk import WebClient
 
-from .config import Config
-from .error_handler import ModernErrorHandler
-from .gemini_rag import GeminiRAGService, RAGResponse
-from .vertex_rag_client import VertexRAGClient
+from whatsupdoc.core.config import Config
+from whatsupdoc.core.error_handler import ModernErrorHandler
+from whatsupdoc.core.gemini_rag import GeminiRAGService, RAGResponse
+from whatsupdoc.core.vertex_rag_client import VertexRAGClient
 
 logger = structlog.get_logger()
 
@@ -78,7 +79,13 @@ class SlackBot:
         def handle_mention(
             event: dict[str, Any], say: Callable[..., Any], client: WebClient
         ) -> None:
-            asyncio.run(self._handle_query_async(event, say, client, event["text"]))
+            # Create new event loop for the async operation (original working pattern)
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                loop.run_until_complete(self._handle_query_async(event, say, client, event["text"]))
+            finally:
+                loop.close()
 
         @self.app.command("/ask")
         def handle_ask_command(
@@ -87,13 +94,42 @@ class SlackBot:
             command: dict[str, Any],
             client: WebClient,
         ) -> None:
-            ack()  # Acknowledge immediately
-            asyncio.run(self._handle_query_async(command, respond, client, command["text"]))
+            ack()  # Acknowledge immediately to prevent dispatch_failed
+
+            # Run async work in a new thread to avoid blocking (original working pattern)
+            def run_async_query() -> None:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    loop.run_until_complete(
+                        self._handle_query_async(command, respond, client, command["text"])
+                    )
+                except Exception as e:
+                    logger.error("Error in slash command handler", error=str(e))
+                    try:
+                        respond({"text": f"❌ Sorry, I encountered an error: {str(e)}"})
+                    except Exception:
+                        pass  # Respond might fail if connection is closed
+                finally:
+                    loop.close()
+
+            # Start the async work in a background thread
+            thread = threading.Thread(target=run_async_query)
+            thread.daemon = True
+            thread.start()
 
         @self.app.message("")
         def handle_dm(message: dict[str, Any], say: Callable[..., Any], client: WebClient) -> None:
             if message.get("channel_type") == "im":
-                asyncio.run(self._handle_query_async(message, say, client, message["text"]))
+                # Create new event loop for the async operation (original working pattern)
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    loop.run_until_complete(
+                        self._handle_query_async(message, say, client, message["text"])
+                    )
+                finally:
+                    loop.close()
 
     async def _handle_query_async(
         self,
@@ -281,7 +317,13 @@ class SlackBot:
                 },
             },
             {"type": "divider"},
-            {"type": "section", "text": {"type": "mrkdwn", "text": rag_response.answer}},
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": self._convert_markdown_to_slack(rag_response.answer),
+                },
+            },
         ]
 
         # Add condensed sources section if available
@@ -358,6 +400,22 @@ class SlackBot:
         )
 
         return blocks
+
+    def _convert_markdown_to_slack(self, text: str) -> str:
+        """Convert common markdown formatting to Slack's mrkdwn format."""
+        import re
+
+        # Bold: **text** -> *text* (Slack uses single asterisks for bold)
+        text = re.sub(r"\*\*(.*?)\*\*", r"*\1*", text)
+
+        # Code blocks: ```code``` -> ```code``` (already correct)
+        # Inline code: `code` -> `code` (already correct)
+
+        # Lists: convert - to • for better visual in Slack
+        text = re.sub(r"^- ", "• ", text, flags=re.MULTILINE)
+        text = re.sub(r"^\d+\. ", "• ", text, flags=re.MULTILINE)  # numbered lists to bullets
+
+        return text
 
     def get_flask_app(self) -> Flask:
         """Create and return Flask app for WSGI deployment."""

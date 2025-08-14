@@ -9,7 +9,7 @@ import pytest
 from dotenv import load_dotenv
 
 if TYPE_CHECKING:
-    from whatsupdoc.vertex_rag_client import VertexRAGClient
+    from whatsupdoc.core.vertex_rag_client import VertexRAGClient
 
 # Load environment variables
 load_dotenv()
@@ -63,7 +63,7 @@ def test_required_env_variables(required_env_vars: list[str]) -> None:
 @pytest.fixture
 def rag_client(rag_config: dict[str, str]) -> "VertexRAGClient":
     """Create a RAG client for testing."""
-    from whatsupdoc.vertex_rag_client import VertexRAGClient
+    from whatsupdoc.core.vertex_rag_client import VertexRAGClient
 
     return VertexRAGClient(
         project_id=rag_config["project_id"],
