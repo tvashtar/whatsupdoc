@@ -254,6 +254,34 @@ gcloud projects add-iam-policy-binding YOUR-PROJECT-ID \
    - Go to "Basic Information" → "App Credentials"
    - Copy the **Signing Secret** → Update your `.env`: `SLACK_SIGNING_SECRET=your-signing-secret`
 
+6. **Configure Slash Commands** (for local development):
+   - Go to "Slash Commands" → "Create New Command"
+   - **Command**: `/ask`
+   - **Request URL**: Leave blank for now (Socket Mode doesn't need this)
+   - **Short Description**: "Ask the knowledge base a question"
+   - **Usage Hint**: "what is our PTO policy?"
+   - Click "Save"
+
+7. **Configure Event Subscriptions** (for local development):
+   - Go to "Event Subscriptions"
+   - **Enable Events**: Toggle ON
+   - **Request URL**: Leave blank for now (Socket Mode doesn't need this)
+   - **Subscribe to bot events**: Add these events:
+     - `app_mention`
+     - `message.channels`
+     - `message.groups` 
+     - `message.im`
+     - `message.mpim`
+   - Click "Save Changes"
+
+#### Configuration for Different Deployment Modes
+
+**🏠 Local Development (Socket Mode)**
+The configuration above is perfect for local development. Your bot connects via websockets using the `SLACK_APP_TOKEN`.
+
+**☁️ Cloud Run Production (HTTP Mode)**
+When deploying to Cloud Run, you'll need to reconfigure your Slack app to use HTTP endpoints instead of Socket Mode. See the [Cloud Run Slack Configuration](#cloud-run-slack-configuration) section below for the required changes.
+
 ### 4. Verify Your Configuration
 
 After completing the setup steps above, your `.env` file should look similar to this:
@@ -463,16 +491,49 @@ gcloud run deploy whatsupdoc-slack-bot \
   --quiet
 ```
 
-3. **Configure Slack app for Cloud Run** (IMPORTANT):
-   - **Disable Socket Mode**: Settings → Socket Mode → Toggle OFF
-   - **Configure Event Subscriptions**:
-     - Enable Events
-     - Request URL: `https://YOUR-SERVICE-URL.run.app/slack/events`
-     - Subscribe to bot events: `app_mention`, `message.channels`, `message.groups`, `message.im`, `message.mpim`
-   - **Update Slash Commands**:
-     - Set `/ask` command URL to: `https://YOUR-SERVICE-URL.run.app/slack/events`
-   - **Update Interactivity & Shortcuts** (if used):
-     - Request URL: `https://YOUR-SERVICE-URL.run.app/slack/events`
+### Cloud Run Slack Configuration
+
+**IMPORTANT**: After deploying to Cloud Run, you must reconfigure your Slack app to use HTTP mode instead of Socket Mode.
+
+3. **Switch from Socket Mode to HTTP Mode**:
+
+   a) **Disable Socket Mode**:
+   - Go to your Slack app settings → "Socket Mode"
+   - Toggle **Enable Socket Mode** to **OFF**
+   - Click "Save Changes"
+
+   b) **Configure Event Subscriptions**:
+   - Go to "Event Subscriptions"
+   - **Enable Events**: Toggle ON (if not already enabled)
+   - **Request URL**: `https://YOUR-SERVICE-URL.run.app/slack/events`
+     - Replace `YOUR-SERVICE-URL` with your actual Cloud Run service URL
+     - Slack will verify this URL automatically
+   - **Subscribe to bot events** (if not already configured):
+     - `app_mention`
+     - `message.channels`
+     - `message.groups`
+     - `message.im`
+     - `message.mpim`
+   - Click "Save Changes"
+
+   c) **Update Slash Commands**:
+   - Go to "Slash Commands"
+   - Click on your existing `/ask` command (or create it if missing)
+   - **Request URL**: `https://YOUR-SERVICE-URL.run.app/slack/events`
+   - **Short Description**: "Ask the knowledge base a question"
+   - **Usage Hint**: "what is our PTO policy?"
+   - Click "Save"
+
+   d) **Configure Interactivity** (if needed):
+   - Go to "Interactivity & Shortcuts"
+   - **Interactivity**: Toggle ON
+   - **Request URL**: `https://YOUR-SERVICE-URL.run.app/slack/events`
+   - Click "Save Changes"
+
+**🔄 Switching Between Modes**:
+- **Local Development**: Enable Socket Mode, leave Request URLs blank
+- **Cloud Run Production**: Disable Socket Mode, set Request URLs to your Cloud Run service
+- The bot code automatically detects which mode to use based on the `PORT` environment variable
 
 4. **Monitor logs**:
 ```bash
