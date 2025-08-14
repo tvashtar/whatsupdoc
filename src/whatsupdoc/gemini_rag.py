@@ -2,7 +2,6 @@
 """Modern Gemini integration using latest google-genai SDK patterns."""
 
 import asyncio
-import logging
 from dataclasses import dataclass
 
 import structlog
@@ -36,6 +35,7 @@ class GeminiRAGService:
         use_vertex_ai: bool = True,
         temperature: float = 0.1,
     ) -> None:
+        """Initialize the Gemini RAG service."""
         self.project_id = project_id
         self.location = location
         self.model = model
@@ -52,9 +52,7 @@ class GeminiRAGService:
         else:
             self.client = genai.Client()  # Uses GOOGLE_API_KEY env var
 
-        logger.info(
-            "Initialized modern Gemini client", model=model, vertex_ai=use_vertex_ai
-        )
+        logger.info("Initialized modern Gemini client", model=model, vertex_ai=use_vertex_ai)
 
     async def generate_answer_async(
         self,
@@ -79,28 +77,36 @@ class GeminiRAGService:
             context = "\n".join(context_parts)
 
             # Modern prompt template
-            prompt = f"""Based on the following company documents, provide a comprehensive answer to the user's question. Be specific, cite relevant information, and indicate if the answer cannot be fully determined from the provided context.
+            prompt = (
+                f"""Based on the following company documents, provide a comprehensive """
+                f"""answer to the user's question. Be specific, cite relevant information, """
+                f"""and indicate if the answer cannot be fully determined from the provided context.
 
 Question: {query}
 
 Context:
 {context}
 
-Please provide a detailed, helpful answer based on the above context. If you cannot answer fully based on the provided documents, please indicate what additional information might be needed."""
+Please provide a detailed, helpful answer based on the above context. """
+                f"""If you cannot answer fully based on the provided documents, """
+                f"""please indicate what additional information might be needed."""
+            )
 
-            # Use modern generate_content with proper config
+            # Use modern generate_content with proper config and error handling
             loop = asyncio.get_event_loop()
-            response = await loop.run_in_executor(
-                None,
-                lambda: self.client.models.generate_content(
-                    model=self.model,
-                    contents=prompt,
-                    config=types.GenerateContentConfig(
-                        temperature=self.temperature,
-                        max_output_tokens=2048,
-                        candidate_count=1,
+            response = await ModernErrorHandler.robust_api_call(
+                lambda: loop.run_in_executor(
+                    None,
+                    lambda: self.client.models.generate_content(
+                        model=self.model,
+                        contents=prompt,
+                        config=types.GenerateContentConfig(
+                            temperature=self.temperature,
+                            max_output_tokens=2048,
+                            candidate_count=1,
+                        ),
                     ),
-                ),
+                )
             )
 
             # Calculate confidence based on context quality
@@ -134,12 +140,16 @@ Please provide a detailed, helpful answer based on the above context. If you can
     async def test_connection_async(self) -> bool:
         """Test the Gemini connection."""
         try:
-            response = await asyncio.get_event_loop().run_in_executor(
-                None,
-                lambda: self.client.models.generate_content(
-                    model=self.model,
-                    contents="Hello, this is a test. Please respond with 'Connection successful.'",
-                ),
+            response = await ModernErrorHandler.robust_api_call(
+                lambda: asyncio.get_event_loop().run_in_executor(
+                    None,
+                    lambda: self.client.models.generate_content(
+                        model=self.model,
+                        contents=(
+                            "Hello, this is a test. Please respond with 'Connection successful.'"
+                        ),
+                    ),
+                )
             )
 
             if response.text and "successful" in response.text.lower():

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Modern error handling and retry logic using tenacity."""
 
-import logging
-from typing import Any, Callable, TypeVar
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 import structlog
 from google.api_core.exceptions import RetryError, ServiceUnavailable
@@ -33,9 +33,7 @@ class ModernErrorHandler:
         try:
             return await func(*args, **kwargs)
         except Exception as e:
-            logger.warning(
-                "API call failed, retrying", error=str(e), func=func.__name__
-            )
+            logger.warning("API call failed, retrying", error=str(e), func=func.__name__)
             raise
 
     @staticmethod
