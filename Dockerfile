@@ -8,7 +8,7 @@ WORKDIR /app
 RUN pip install uv
 
 # Copy dependency files and source structure for package installation
-COPY pyproject.toml README.md ./
+COPY pyproject.toml README.md wsgi.py ./
 COPY src/ ./src/
 
 # Install dependencies using uv (most have pre-built wheels, no gcc needed)
@@ -21,5 +21,5 @@ ENV PORT=8080
 # Cloud Run expects the app to listen on PORT
 EXPOSE 8080
 
-# Run the application using the entry point
-CMD ["whatsupdoc"]
+# Use production WSGI server for Cloud Run
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "2", "--timeout", "60", "--preload", "wsgi:application"]

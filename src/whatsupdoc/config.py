@@ -1,45 +1,71 @@
+#!/usr/bin/env python3
+"""Modern configuration using Pydantic for validation."""
+
 import os
 from typing import Optional
 
+from pydantic import Field, field_validator, ConfigDict
+from pydantic_settings import BaseSettings
 
-class Config:
-    def __init__(self):
-        # GCP Settings - RAG Engine Configuration
-        self.project_id = os.getenv("PROJECT_ID", "")
-        self.location = os.getenv("LOCATION", "us-central1")
-        self.rag_corpus_id = os.getenv("RAG_CORPUS_ID", "")
-        
-        # Slack Settings
-        self.slack_bot_token = os.getenv("SLACK_BOT_TOKEN", "")
-        self.slack_signing_secret = os.getenv("SLACK_SIGNING_SECRET", "")
-        self.slack_app_token = os.getenv("SLACK_APP_TOKEN", "")
-        
-        # Feature Configuration
-        self.use_grounded_generation = os.getenv("USE_GROUNDED_GENERATION", "True").lower() == "true"
-        self.max_results = int(os.getenv("MAX_RESULTS", "5"))
-        self.response_timeout = int(os.getenv("RESPONSE_TIMEOUT", "30"))
-        
-        # Bot Configuration
-        self.bot_name = os.getenv("BOT_NAME", "KnowledgeBot")
-        self.rate_limit_per_user = int(os.getenv("RATE_LIMIT_PER_USER", "10"))
-        self.rate_limit_window = int(os.getenv("RATE_LIMIT_WINDOW", "60"))
-        
-        # Google Cloud Authentication
-        self.google_credentials_path: Optional[str] = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-        
-        # Gemini Settings
-        self.gemini_model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
-        self.gemini_api_key = os.getenv("GEMINI_API_KEY", "")
-        self.use_vertex_ai = os.getenv("USE_VERTEX_AI", "True").lower() == "true"
-        
-        # RAG Generation Settings
-        self.enable_rag_generation = os.getenv("ENABLE_RAG_GENERATION", "True").lower() == "true"
-        self.max_context_length = int(os.getenv("MAX_CONTEXT_LENGTH", "100000"))
-        self.answer_temperature = float(os.getenv("ANSWER_TEMPERATURE", "0.3"))
-    
+
+class Config(BaseSettings):
+    """Type-safe configuration with validation."""
+
+    # GCP Settings
+    project_id: str = Field(..., description="Google Cloud Project ID")
+    location: str = Field(default="us-central1", description="GCP region")
+    rag_corpus_id: str = Field(..., description="Vertex AI RAG Corpus ID")
+
+    # Slack Settings
+    slack_bot_token: str = Field(..., description="Slack Bot Token")
+    slack_signing_secret: str = Field(..., description="Slack Signing Secret")
+    slack_app_token: Optional[str] = Field(
+        default=None, description="Slack App Token for Socket Mode"
+    )
+
+    # Feature Configuration
+    use_grounded_generation: bool = Field(default=True)
+    max_results: int = Field(default=7, ge=1, le=20)
+    response_timeout: int = Field(default=30, ge=5, le=120)
+
+    # Bot Configuration
+    bot_name: str = Field(default="KnowledgeBot")
+    rate_limit_per_user: int = Field(default=10, ge=1, le=100)
+    rate_limit_window: int = Field(default=60, ge=30, le=3600)
+
+    # Gemini Settings
+    gemini_model: str = Field(default="gemini-2.5-flash-lite")
+    use_vertex_ai: bool = Field(default=True)
+    enable_rag_generation: bool = Field(default=True)
+    max_context_length: int = Field(default=100000, ge=1000, le=1000000)
+    answer_temperature: float = Field(default=0.1, ge=0.0, le=2.0)
+
+    model_config = ConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore"  # Ignore extra environment variables
+    )
+
+    @field_validator("slack_app_token", mode="before")
+    @classmethod
+    def validate_slack_app_token(cls, v):
+        """App token required only if not running in Cloud Run."""
+        if not os.getenv("PORT") and not v:
+            raise ValueError("SLACK_APP_TOKEN required for Socket Mode")
+        return v
+
+    @field_validator("project_id", "rag_corpus_id", "slack_bot_token", "slack_signing_secret", mode="before")
+    @classmethod
+    def validate_required_fields(cls, v):
+        if not v or not v.strip():
+            raise ValueError("This field is required and cannot be empty")
+        return v.strip()
+
     def validate(self) -> list[str]:
+        """Additional validation for backwards compatibility."""
         errors = []
-        
+
         if not self.project_id:
             errors.append("PROJECT_ID is required")
         if not self.rag_corpus_id:
@@ -48,9 +74,9 @@ class Config:
             errors.append("SLACK_BOT_TOKEN is required")
         if not self.slack_signing_secret:
             errors.append("SLACK_SIGNING_SECRET is required")
-        
+
         # Only require app token if not running in Cloud Run (no PORT env var)
         if not os.getenv("PORT") and not self.slack_app_token:
             errors.append("SLACK_APP_TOKEN is required for Socket Mode")
-            
+
         return errors

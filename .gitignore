@@ -231,3 +231,9 @@ service-account*.json
 # Deployment artifacts
 deploy.log
 gcloud.log
+
+# Test configuration with secrets
+tests/e2e/config.py
+tests/results/production_*.md
+
+*.code-workspace
