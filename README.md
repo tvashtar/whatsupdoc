@@ -56,7 +56,6 @@ A production-ready Slack RAG chatbot that allows employees to query your company
 - 💬 Multiple interaction methods:
   - @mentions: `@KnowledgeBot what is our PTO policy?`
   - Slash commands: `/ask what is our remote work policy?`
-  - Direct messages to the bot
 - 📚 Rich responses with source attribution and confidence scores
 - ⚡ Responses within 5 seconds
 - 🛡️ Rate limiting and error handling
