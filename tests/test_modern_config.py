@@ -23,7 +23,6 @@ def test_modern_config_validation():
         assert config.project_id == "test-project"
         assert config.rag_corpus_id == "test-corpus"
         assert config.slack_bot_token == "xoxb-test"
-        assert config.max_results == 5  # default
         assert config.gemini_model == "gemini-2.5-flash-lite"  # default
 
 
@@ -97,7 +96,6 @@ def test_modern_config_defaults():
         # Test defaults
         assert config.location == "us-central1"
         assert config.use_grounded_generation == True
-        assert config.max_results == 5
         assert config.response_timeout == 30
         assert config.bot_name == "whatsupdoc"
         assert config.rate_limit_per_user == 10

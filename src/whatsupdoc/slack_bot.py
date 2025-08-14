@@ -266,59 +266,47 @@ class SlackBot:
             {"type": "section", "text": {"type": "mrkdwn", "text": rag_response.answer}},
         ]
 
-        # Add sources section if available
+        # Add condensed sources section if available
         if rag_response.sources:
+            # Group sources by document
+            doc_counts = {}
+            for result in rag_response.sources:
+                if result.source_uri and result.source_uri.startswith("gs://"):
+                    filename = result.source_uri.split("/")[-1]
+                    doc_counts[filename] = doc_counts.get(filename, 0) + 1
+                else:
+                    doc_counts[result.title] = doc_counts.get(result.title, 0) + 1
+            
+            # Create source summary
+            source_summary = []
+            for doc, count in sorted(doc_counts.items(), key=lambda x: x[1], reverse=True):
+                source_summary.append(f"📄 {doc} ({count})")
+            
+            # Get top result for snippet
+            top_result = rag_response.sources[0]
+            top_confidence_emoji = (
+                "🟢" if top_result.confidence_score >= 0.7
+                else "🟡" if top_result.confidence_score >= 0.4
+                else "🔴"
+            )
+
             blocks.extend([
                 {"type": "divider"},
                 {
-                    "type": "header",
-                    "text": {"type": "plain_text", "text": "📚 Sources"},
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn", 
+                        "text": f"📚 *Sources ({len(rag_response.sources)} chunks):*\n" + " • ".join(source_summary[:3]) + ("..." if len(source_summary) > 3 else "")
+                    }
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f"*Top Match:* {top_confidence_emoji} {top_result.confidence_score:.0%} relevance\n```{top_result.content[:200]}{'...' if len(top_result.content) > 200 else ''}```",
+                    },
                 },
             ])
-
-            for i, result in enumerate(rag_response.sources, 1):
-                source_confidence_emoji = (
-                    "🟢"
-                    if result.confidence_score >= 0.7
-                    else "🟡"
-                    if result.confidence_score >= 0.4
-                    else "🔴"
-                )
-
-                blocks.extend([
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": f"*{i}. {result.title}*\n{source_confidence_emoji} Relevance: {result.confidence_score:.0%}",
-                        },
-                    },
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": f"```{result.content[:300]}{'...' if len(result.content) > 300 else ''}```",
-                        },
-                    },
-                ])
-
-                # Add source link if available
-                if result.source_uri:
-                    source_text = result.source_uri
-                    if result.source_uri.startswith("gs://"):
-                        filename = result.source_uri.split("/")[-1]
-                        source_text = f"📄 {filename}"
-
-                    blocks.append({
-                        "type": "context",
-                        "elements": [
-                            {"type": "mrkdwn", "text": f"Source: {source_text}"}
-                        ],
-                    })
-
-                # Add separator between sources (except last one)
-                if i < len(rag_response.sources):
-                    blocks.append({"type": "divider"})
 
         # Add footer with tips
         blocks.extend([
