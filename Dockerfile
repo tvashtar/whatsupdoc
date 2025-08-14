@@ -8,11 +8,11 @@ WORKDIR /app
 RUN pip install uv
 
 # Copy dependency files and source structure for package installation
-COPY pyproject.toml README.md wsgi.py ./
+COPY pyproject.toml uv.lock README.md wsgi.py ./
 COPY src/ ./src/
 
-# Install dependencies using uv (most have pre-built wheels, no gcc needed)
-RUN uv pip install --system --no-cache .
+# Install only production dependencies from lock file
+RUN uv sync --frozen --no-dev --no-cache
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
