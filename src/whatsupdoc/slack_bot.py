@@ -33,7 +33,7 @@ class SlackBot:
         self.config = Config()
 
         # Validate configuration
-        errors = self.config.validate()
+        errors = self.config.validate_config()
         if errors:
             logger.error("Configuration errors", errors=errors)
             raise ValueError(f"Configuration errors: {', '.join(errors)}")
@@ -109,7 +109,7 @@ class SlackBot:
         logger.info("Processing query", user_id=user_id, query=query_text)
 
         # Rate limiting check
-        if not await self._check_rate_limit_async(user_id):
+        if user_id and not await self._check_rate_limit_async(user_id):
             respond_func({"text": "⚠️ Rate limit exceeded. Please wait before trying again."})
             return
 
@@ -135,7 +135,7 @@ class SlackBot:
 
             if results and self.rag_service:
                 # Generate answer using RAG
-                rag_response = await ModernErrorHandler.robust_api_call(
+                rag_response: RAGResponse = await ModernErrorHandler.robust_api_call(
                     self.rag_service.generate_answer_async,
                     query=clean_query,
                     search_results=results,
@@ -145,7 +145,7 @@ class SlackBot:
                 response_blocks = self._format_rag_response(clean_query, rag_response)
 
                 # Update loading message if timestamp is available
-                if loading_ts:
+                if loading_ts and channel_id:
                     client.chat_update(
                         channel=channel_id,
                         ts=loading_ts,
@@ -162,7 +162,7 @@ class SlackBot:
                     )
             else:
                 # Handle no results case
-                if loading_ts:
+                if loading_ts and channel_id:
                     client.chat_update(
                         channel=channel_id,
                         ts=loading_ts,
@@ -180,7 +180,7 @@ class SlackBot:
             error_context = {"query": clean_query, "user_id": user_id}
             error_message = ModernErrorHandler.handle_rag_error(e, error_context)
 
-            if loading_ts:
+            if loading_ts and channel_id:
                 client.chat_update(
                     channel=channel_id,
                     ts=loading_ts,
@@ -265,7 +265,7 @@ class SlackBot:
             else "🔴"
         )
 
-        blocks = [
+        blocks: list[dict[str, Any]] = [
             {
                 "type": "header",
                 "text": {"type": "plain_text", "text": f"🤖 Answer: {query}"},
@@ -287,7 +287,7 @@ class SlackBot:
         # Add condensed sources section if available
         if rag_response.sources:
             # Group sources by document
-            doc_counts = {}
+            doc_counts: dict[str, int] = {}
             for result in rag_response.sources:
                 if result.source_uri and result.source_uri.startswith("gs://"):
                     filename = result.source_uri.split("/")[-1]
@@ -410,8 +410,8 @@ class SlackBot:
             logger.info("Starting in Socket Mode")
             if not self.config.slack_app_token:
                 raise ValueError("SLACK_APP_TOKEN is required for Socket Mode")
-            handler = SocketModeHandler(self.app, self.config.slack_app_token)
-            handler.start()
+            socket_handler = SocketModeHandler(self.app, self.config.slack_app_token)
+            socket_handler.start()
 
     async def _test_connections(self) -> None:
         """Test all external connections with graceful degradation."""

@@ -269,7 +269,7 @@ gcloud projects add-iam-policy-binding YOUR-PROJECT-ID \
    - **Subscribe to bot events**: Add these events:
      - `app_mention`
      - `message.channels`
-     - `message.groups` 
+     - `message.groups`
      - `message.im`
      - `message.mpim`
    - Click "Save Changes"
@@ -311,7 +311,7 @@ USE_GROUNDED_GENERATION=True
 MAX_RESULTS=7
 RESPONSE_TIMEOUT=30
 
-# Bot Configuration  
+# Bot Configuration
 BOT_NAME=KnowledgeBot
 RATE_LIMIT_PER_USER=10
 RATE_LIMIT_WINDOW=60
@@ -438,7 +438,7 @@ gcloud projects add-iam-policy-binding PROJECT_ID \
   --member="serviceAccount:${PROJECT_NUMBER}@cloudbuild.gserviceaccount.com" \
   --role="roles/artifactregistry.writer"
 
-# Grant permissions to Compute Engine default service account  
+# Grant permissions to Compute Engine default service account
 gcloud projects add-iam-policy-binding PROJECT_ID \
   --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
   --role="roles/logging.logWriter"
@@ -564,7 +564,7 @@ gcloud run logs read --service whatsupdoc-slack-bot --region us-central1
 - **Solution**: Reverted to proven REST API approach with `requests` and `google-auth`
 - **Result**: Bot now correctly retrieves and processes document chunks
 
-### ✅ Dependency Optimization  
+### ✅ Dependency Optimization
 - **Removed**: Heavy `google-cloud-aiplatform` package (200MB+ with dependencies)
 - **Added**: Minimal `google-api-core` for essential functionality
 - **Benefit**: Faster deployments, smaller container images, reduced build times
@@ -577,7 +577,7 @@ gcloud run logs read --service whatsupdoc-slack-bot --region us-central1
 
 ### ✅ Clear Data Structure Naming
 - **Before**: Confusing use of "snippet" for 4,000+ character chunks
-- **After**: 
+- **After**:
   - `.content` = Full chunk content for RAG processing (~4,600 chars, ~894 tokens)
   - Slack preview = Actual 300-character snippet for UI display
   - Gemini context = Full content for comprehensive answer generation

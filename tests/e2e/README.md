@@ -50,7 +50,7 @@ webhook_url = "https://your-service-url.run.app/slack/events"
 
 ## 📊 **Expected Results**
 
-- **Slash Commands**: Should return `200 OK` 
+- **Slash Commands**: Should return `200 OK`
 - **Event Handlers**: May return `500` with fake channels (normal)
 - **Health Checks**: Should return `200 OK` with service status
 - **URL Verification**: Should return `200 OK` with challenge response

@@ -3,12 +3,12 @@
 
 import asyncio
 from dataclasses import dataclass
+from typing import Any
 
 import structlog
 from google import genai
 from google.genai import types
 
-from .error_handler import ModernErrorHandler
 from .vertex_rag_client import SearchResult
 
 logger = structlog.get_logger()
@@ -94,20 +94,19 @@ Please provide a detailed, helpful answer based on the above context. """
 
             # Use modern generate_content with proper config and error handling
             loop = asyncio.get_event_loop()
-            response = await ModernErrorHandler.robust_api_call(
-                lambda: loop.run_in_executor(
-                    None,
-                    lambda: self.client.models.generate_content(
-                        model=self.model,
-                        contents=prompt,
-                        config=types.GenerateContentConfig(
-                            temperature=self.temperature,
-                            max_output_tokens=2048,
-                            candidate_count=1,
-                        ),
+
+            def sync_generate() -> Any:
+                return self.client.models.generate_content(
+                    model=self.model,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        temperature=self.temperature,
+                        max_output_tokens=2048,
+                        candidate_count=1,
                     ),
                 )
-            )
+
+            response = await loop.run_in_executor(None, sync_generate)
 
             # Calculate confidence based on context quality
             avg_confidence = (
@@ -140,17 +139,17 @@ Please provide a detailed, helpful answer based on the above context. """
     async def test_connection_async(self) -> bool:
         """Test the Gemini connection."""
         try:
-            response = await ModernErrorHandler.robust_api_call(
-                lambda: asyncio.get_event_loop().run_in_executor(
-                    None,
-                    lambda: self.client.models.generate_content(
-                        model=self.model,
-                        contents=(
-                            "Hello, this is a test. Please respond with 'Connection successful.'"
-                        ),
+            loop = asyncio.get_event_loop()
+
+            def sync_test() -> Any:
+                return self.client.models.generate_content(
+                    model=self.model,
+                    contents=(
+                        "Hello, this is a test. Please respond with 'Connection successful.'"
                     ),
                 )
-            )
+
+            response = await loop.run_in_executor(None, sync_test)
 
             if response.text and "successful" in response.text.lower():
                 logger.info("Gemini connection test successful")

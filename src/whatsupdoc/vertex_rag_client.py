@@ -100,7 +100,7 @@ class VertexRAGClient:
             def sync_request() -> dict[str, Any]:
                 response = requests.post(url, json=request_body, headers=headers, timeout=30)
                 response.raise_for_status()
-                return response.json()
+                return response.json()  # type: ignore[no-any-return]
 
             response_data = await loop.run_in_executor(None, sync_request)
 

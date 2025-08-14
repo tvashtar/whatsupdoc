@@ -75,6 +75,8 @@ select = ["E", "F", "W", "C", "I", "N", "D", "UP", "ANN"]
 ignore = [
     "D100",    # Missing docstring in public module
     "D104",    # Missing docstring in public package
+    "D203",    # 1 blank line required before class docstring (conflicts with D211)
+    "D213",    # Multi-line docstring summary should start at the second line (conflicts with D212)
     "D401",    # First line should be in imperative mood
     "D205",    # 1 blank line required between summary line and description
     "D400",    # First line should end with a period

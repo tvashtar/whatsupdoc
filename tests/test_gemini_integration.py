@@ -20,7 +20,7 @@ def config() -> "Config":
     from whatsupdoc.config import Config
 
     config = Config()
-    errors = config.validate()
+    errors = config.validate_config()
 
     if errors:
         pytest.skip(f"Configuration validation failed: {errors}")

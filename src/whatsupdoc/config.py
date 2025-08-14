@@ -3,8 +3,8 @@
 
 import os
 
-from pydantic import ConfigDict, Field, field_validator
-from pydantic_settings import BaseSettings
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Config(BaseSettings):
@@ -37,7 +37,7 @@ class Config(BaseSettings):
     max_context_length: int = Field(default=100000, ge=1000, le=1000000)
     answer_temperature: float = Field(default=0.1, ge=0.0, le=2.0)
 
-    model_config = ConfigDict(
+    model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
@@ -62,7 +62,7 @@ class Config(BaseSettings):
             raise ValueError("This field is required and cannot be empty")
         return v.strip() if v else ""
 
-    def validate(self) -> list[str]:
+    def validate_config(self) -> list[str]:
         """Additional validation for backwards compatibility."""
         errors = []
 
