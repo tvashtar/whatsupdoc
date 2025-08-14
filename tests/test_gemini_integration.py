@@ -1,14 +1,21 @@
 """Test Gemini RAG integration functionality."""
 
+from typing import TYPE_CHECKING
+
 import pytest
 from dotenv import load_dotenv
+
+if TYPE_CHECKING:
+    from whatsupdoc.config import Config
+    from whatsupdoc.gemini_rag import GeminiRAGService
+    from whatsupdoc.vertex_rag_client import VertexRAGClient
 
 # Load environment variables
 load_dotenv()
 
 
 @pytest.fixture
-def config():
+def config() -> "Config":
     """Create and validate configuration."""
     from whatsupdoc.config import Config
 
@@ -22,7 +29,7 @@ def config():
 
 
 @pytest.fixture
-def search_client(config):
+def search_client(config: "Config") -> "VertexRAGClient":
     """Create RAG search client."""
     from whatsupdoc.vertex_rag_client import VertexRAGClient
 
@@ -37,7 +44,7 @@ def search_client(config):
 
 
 @pytest.fixture
-def gemini_service(config):
+def gemini_service(config: "Config") -> "GeminiRAGService":
     """Create Gemini RAG service."""
     from whatsupdoc.gemini_rag import GeminiRAGService
 
@@ -57,7 +64,7 @@ def gemini_service(config):
 
 @pytest.mark.integration
 @pytest.mark.requires_gcp
-def test_config_validation(config):
+def test_config_validation(config: "Config") -> None:
     """Test that configuration is valid."""
     assert config is not None, "Configuration should be created"
     assert hasattr(config, "gemini_model"), "Should have gemini_model"
@@ -72,7 +79,7 @@ def test_config_validation(config):
 
 @pytest.mark.integration
 @pytest.mark.requires_gcp
-def test_search_client_connection(search_client):
+def test_search_client_connection(search_client: "VertexRAGClient") -> None:
     """Test that search client can connect."""
     assert search_client is not None, "Search client should be created"
 
@@ -82,7 +89,7 @@ def test_search_client_connection(search_client):
 
 @pytest.mark.integration
 @pytest.mark.requires_gcp
-def test_gemini_service_connection(gemini_service):
+def test_gemini_service_connection(gemini_service: "GeminiRAGService") -> None:
     """Test that Gemini service can connect."""
     assert gemini_service is not None, "Gemini service should be created"
 
@@ -93,7 +100,7 @@ def test_gemini_service_connection(gemini_service):
 @pytest.mark.integration
 @pytest.mark.requires_gcp
 @pytest.mark.asyncio
-async def test_search_functionality(search_client):
+async def test_search_functionality(search_client: "VertexRAGClient") -> None:
     """Test search functionality works."""
     test_query = "What are the main topics in the documents?"
 
@@ -116,7 +123,11 @@ async def test_search_functionality(search_client):
 @pytest.mark.integration
 @pytest.mark.requires_gcp
 @pytest.mark.asyncio
-async def test_full_rag_pipeline(search_client, gemini_service, config):
+async def test_full_rag_pipeline(
+    search_client: "VertexRAGClient",
+    gemini_service: "GeminiRAGService",
+    config: "Config",
+) -> None:
     """Test the complete RAG pipeline integration."""
     # Try multiple queries to increase chance of finding results
     test_queries = ["policy", "documentation", "information", "process", "management"]
@@ -140,7 +151,9 @@ async def test_full_rag_pipeline(search_client, gemini_service, config):
 
     # Step 2: Generate RAG answer
     rag_response = await gemini_service.generate_answer(
-        query=test_query, search_results=results, max_context_length=config.max_context_length
+        query=test_query,
+        search_results=results,
+        max_context_length=config.max_context_length,
     )
 
     # Verify response structure
@@ -163,7 +176,12 @@ async def test_full_rag_pipeline(search_client, gemini_service, config):
 @pytest.mark.requires_gcp
 @pytest.mark.parametrize("query", ["policy", "process", "information"])
 @pytest.mark.asyncio
-async def test_rag_pipeline_multiple_queries(search_client, gemini_service, config, query):
+async def test_rag_pipeline_multiple_queries(
+    search_client: "VertexRAGClient",
+    gemini_service: "GeminiRAGService",
+    config: "Config",
+    query: str,
+) -> None:
     """Test RAG pipeline with different types of queries."""
     results = await search_client.search(query=query, max_results=2, use_grounded_generation=True)
 
@@ -171,7 +189,9 @@ async def test_rag_pipeline_multiple_queries(search_client, gemini_service, conf
         pytest.skip(f"No search results found for query: '{query}'")
 
     rag_response = await gemini_service.generate_answer(
-        query=query, search_results=results, max_context_length=config.max_context_length
+        query=query,
+        search_results=results,
+        max_context_length=config.max_context_length,
     )
 
     assert rag_response is not None, f"Should generate response for query: '{query}'"

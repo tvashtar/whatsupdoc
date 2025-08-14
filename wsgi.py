@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-def create_app():
+def create_app() -> object:
     """Create and configure the Flask app for WSGI deployment."""
     from whatsupdoc.slack_bot import SlackBot
 

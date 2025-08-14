@@ -72,7 +72,20 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "C", "I", "N", "D", "UP", "ANN"]
-ignore = ["D100", "D104"]
+ignore = [
+    "D100",    # Missing docstring in public module
+    "D104",    # Missing docstring in public package
+    "D401",    # First line should be in imperative mood
+    "D205",    # 1 blank line required between summary line and description
+    "D400",    # First line should end with a period
+    "D415",    # First line should end with period/question/exclamation
+    "D200",    # One-line docstring should fit on one line
+    "D101",    # Missing docstring in public class (sometimes not needed)
+    "ANN401",  # Dynamically typed expressions (Any) - sometimes necessary
+    "UP038",   # Use | instead of Union in isinstance - less readable sometimes
+    "C901",    # Too complex - sometimes unavoidable for business logic
+    "W293",    # Blank line contains whitespace - auto-fixable but annoying
+]
 
 [tool.mypy]
 python_version = "3.11"

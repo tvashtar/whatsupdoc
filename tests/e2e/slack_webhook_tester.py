@@ -16,7 +16,14 @@ load_dotenv()
 
 
 class SlackWebhookTester:
-    def __init__(self, webhook_url: str, signing_secret: str):
+    def __init__(self, webhook_url: str, signing_secret: str) -> None:
+        """Initialize the Slack webhook tester.
+
+        Args:
+            webhook_url: The webhook URL to test against
+            signing_secret: Slack signing secret for request verification
+
+        """
         self.webhook_url = webhook_url
         self.signing_secret = signing_secret.encode()
 
@@ -223,7 +230,8 @@ class SlackWebhookTester:
             and results.get("url_verification")
         ):
             print(
-                "✅ Core functionality working! Event handler 'failures' are expected with test data."
+                "✅ Core functionality working! Event handler 'failures' are "
+                "expected with test data."
             )
             print("💡 The bot correctly processes events but can't post to fake channels.")
             print("🚀 Bot is ready for production with real Slack workspace!")
@@ -246,7 +254,7 @@ class SlackWebhookTester:
         return results
 
 
-def main():
+def main() -> dict[str, bool] | None:
     """Main test runner."""
     # Configuration
     webhook_url = "https://whatsupdoc-slack-bot-530988540591.us-central1.run.app/slack/events"
@@ -255,7 +263,7 @@ def main():
     if not signing_secret:
         print("❌ Error: SLACK_SIGNING_SECRET not found in environment variables")
         print("💡 Make sure your .env file contains the signing secret")
-        return
+        return None
 
     # Create tester and run tests
     tester = SlackWebhookTester(webhook_url, signing_secret)
@@ -278,7 +286,8 @@ def main():
     print("python test_slack_webhook.py                    # Run full test suite")
     print("python test_slash_command_simple.py            # Test multiple slash commands")
     print(
-        "python -c \"from test_slack_webhook import *; t=SlackWebhookTester('URL', 'SECRET'); t.test_slash_command('your query')\""
+        'python -c "from test_slack_webhook import *; '
+        "t=SlackWebhookTester('URL', 'SECRET'); t.test_slash_command('your query')\""
     )
 
     return results

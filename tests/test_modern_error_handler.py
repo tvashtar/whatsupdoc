@@ -5,7 +5,7 @@ import pytest
 
 
 @pytest.mark.unit
-def test_error_handler_slack_errors():
+def test_error_handler_slack_errors() -> None:
     """Test error handler for Slack-specific errors."""
     from whatsupdoc.error_handler import ModernErrorHandler
 
@@ -26,7 +26,7 @@ def test_error_handler_slack_errors():
 
 
 @pytest.mark.unit
-def test_error_handler_rag_errors():
+def test_error_handler_rag_errors() -> None:
     """Test error handler for RAG-specific errors."""
     from whatsupdoc.error_handler import ModernErrorHandler
 

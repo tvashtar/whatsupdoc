@@ -1,20 +1,20 @@
-"""Test that the whatsupdoc package can be imported correctly and all modules work.
-"""
+"""Test that the whatsupdoc package can be imported correctly and all modules work."""
+
 import pytest
 
 import whatsupdoc
 
 
 @pytest.mark.unit
-def test_main_package_import():
+def test_main_package_import() -> None:
     """Test that the main package can be imported and has version."""
-    assert hasattr(whatsupdoc, '__version__')
+    assert hasattr(whatsupdoc, "__version__")
     assert isinstance(whatsupdoc.__version__, str)
     assert len(whatsupdoc.__version__) > 0
 
 
 @pytest.mark.unit
-def test_config_module_import():
+def test_config_module_import() -> None:
     """Test that config module imports and instantiates correctly."""
     from whatsupdoc.config import Config
 
@@ -24,7 +24,7 @@ def test_config_module_import():
 
 
 @pytest.mark.unit
-def test_vertex_rag_client_import():
+def test_vertex_rag_client_import() -> None:
     """Test that vertex RAG client modules import correctly."""
     from whatsupdoc.vertex_rag_client import SearchResult, VertexRAGClient
 
@@ -34,7 +34,7 @@ def test_vertex_rag_client_import():
 
 
 @pytest.mark.unit
-def test_gemini_rag_import():
+def test_gemini_rag_import() -> None:
     """Test that Gemini RAG modules import correctly."""
     from whatsupdoc.gemini_rag import GeminiRAGService, RAGResponse
 
@@ -44,7 +44,7 @@ def test_gemini_rag_import():
 
 
 @pytest.mark.unit
-def test_slack_bot_import():
+def test_slack_bot_import() -> None:
     """Test that Slack bot module imports correctly."""
     from whatsupdoc.slack_bot import SlackBot
 
@@ -53,7 +53,7 @@ def test_slack_bot_import():
 
 
 @pytest.mark.unit
-def test_app_entry_point_import():
+def test_app_entry_point_import() -> None:
     """Test that app entry point imports correctly."""
     from whatsupdoc.app import main
 

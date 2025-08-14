@@ -46,7 +46,7 @@ class Config(BaseSettings):
 
     @field_validator("slack_app_token", mode="before")
     @classmethod
-    def validate_slack_app_token(cls, v):
+    def validate_slack_app_token(cls, v: str | None) -> str | None:
         """App token required only if not running in Cloud Run."""
         if not os.getenv("PORT") and not v:
             raise ValueError("SLACK_APP_TOKEN required for Socket Mode")
@@ -56,10 +56,11 @@ class Config(BaseSettings):
         "project_id", "rag_corpus_id", "slack_bot_token", "slack_signing_secret", mode="before"
     )
     @classmethod
-    def validate_required_fields(cls, v):
+    def validate_required_fields(cls, v: str | None) -> str:
+        """Validate that required fields are not empty."""
         if not v or not v.strip():
             raise ValueError("This field is required and cannot be empty")
-        return v.strip()
+        return v.strip() if v else ""
 
     def validate(self) -> list[str]:
         """Additional validation for backwards compatibility."""

@@ -3,13 +3,15 @@
 
 import asyncio
 import os
+from collections.abc import Callable
 from typing import Any
 
 import structlog
-from flask import Flask, request
+from flask import Flask, Response, request
 from slack_bolt import App
 from slack_bolt.adapter.flask import SlackRequestHandler
 from slack_bolt.adapter.socket_mode import SocketModeHandler
+from slack_sdk import WebClient
 
 from .config import Config
 from .error_handler import ModernErrorHandler
@@ -27,6 +29,7 @@ class SlackBot:
     """Modern Slack bot with proper async patterns and enhanced error handling."""
 
     def __init__(self) -> None:
+        """Initialize the Slack bot with configuration and clients."""
         self.config = Config()
 
         # Validate configuration
@@ -72,21 +75,32 @@ class SlackBot:
         """Set up sync event handlers with async logic wrapped properly."""
 
         @self.app.event("app_mention")
-        def handle_mention(event, say, client):
+        def handle_mention(
+            event: dict[str, Any], say: Callable[..., Any], client: WebClient
+        ) -> None:
             asyncio.run(self._handle_query_async(event, say, client, event["text"]))
 
         @self.app.command("/ask")
-        def handle_ask_command(ack, respond, command, client):
+        def handle_ask_command(
+            ack: Callable[[], None],
+            respond: Callable[..., Any],
+            command: dict[str, Any],
+            client: WebClient,
+        ) -> None:
             ack()  # Acknowledge immediately
             asyncio.run(self._handle_query_async(command, respond, client, command["text"]))
 
         @self.app.message("")
-        def handle_dm(message, say, client):
+        def handle_dm(message: dict[str, Any], say: Callable[..., Any], client: WebClient) -> None:
             if message.get("channel_type") == "im":
                 asyncio.run(self._handle_query_async(message, say, client, message["text"]))
 
     async def _handle_query_async(
-        self, event_data: dict[str, Any], respond_func, client, query_text: str
+        self,
+        event_data: dict[str, Any],
+        respond_func: Callable[..., Any],
+        client: WebClient,
+        query_text: str,
     ) -> None:
         """Modern async query handler with proper error handling."""
         user_id = event_data.get("user") or event_data.get("user_id")
@@ -180,7 +194,7 @@ class SlackBot:
                     }
                 )
 
-    def _extract_timestamp(self, response: Any) -> str | None:
+    def _extract_timestamp(self, response: dict[str, Any] | object) -> str | None:
         """Extract timestamp from different Slack response types.
 
         Args:
@@ -260,7 +274,10 @@ class SlackBot:
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"{confidence_emoji} Confidence: {rag_response.confidence_score:.0%} | Sources: {len(rag_response.sources)}",
+                    "text": (
+                        f"{confidence_emoji} Confidence: {rag_response.confidence_score:.0%} | "
+                        f"Sources: {len(rag_response.sources)}"
+                    ),
                 },
             },
             {"type": "divider"},
@@ -309,7 +326,12 @@ class SlackBot:
                         "type": "section",
                         "text": {
                             "type": "mrkdwn",
-                            "text": f"*Top Match:* {top_confidence_emoji} {top_result.confidence_score:.0%} relevance\n```{top_result.content[:200]}{'...' if len(top_result.content) > 200 else ''}```",
+                            "text": (
+                                f"*Top Match:* {top_confidence_emoji} "
+                                f"{top_result.confidence_score:.0%} relevance\n"
+                                f"```{top_result.content[:200]}"
+                                f"{'...' if len(top_result.content) > 200 else ''}```"
+                            ),
                         },
                     },
                 ]
@@ -324,7 +346,11 @@ class SlackBot:
                     "elements": [
                         {
                             "type": "mrkdwn",
-                            "text": "💡 *Tip:* This answer was generated from your company documents. For follow-up questions, try asking for more details or clarification on specific points.",
+                            "text": (
+                                "💡 *Tip:* This answer was generated from your company documents. "
+                                "For follow-up questions, try asking for more details or "
+                                "clarification on specific points."
+                            ),
                         }
                     ],
                 },
@@ -339,15 +365,15 @@ class SlackBot:
         handler = SlackRequestHandler(self.app)
 
         @flask_app.route("/slack/events", methods=["POST"])
-        def slack_events():
+        def slack_events() -> Response:
             return handler.handle(request)
 
         @flask_app.route("/health", methods=["GET"])
-        def health_check():
+        def health_check() -> tuple[dict[str, str], int]:
             return {"status": "healthy", "service": "whatsupdoc"}, 200
 
         @flask_app.route("/", methods=["GET"])
-        def root():
+        def root() -> tuple[dict[str, str], int]:
             return {
                 "status": "running",
                 "service": "whatsupdoc-slack-bot",
@@ -370,11 +396,11 @@ class SlackBot:
             handler = SlackRequestHandler(self.app)
 
             @flask_app.route("/slack/events", methods=["POST"])
-            def slack_events():
+            def slack_events() -> Response:
                 return handler.handle(request)
 
             @flask_app.route("/health", methods=["GET"])
-            def health_check():
+            def health_check() -> tuple[dict[str, str], int]:
                 return {"status": "healthy", "service": "whatsupdoc"}, 200
 
             # Run Flask app

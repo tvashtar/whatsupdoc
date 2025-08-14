@@ -3,22 +3,26 @@ Run this to make sure your RAG Engine setup is working.
 """
 
 import os
+from typing import TYPE_CHECKING
 
 import pytest
 from dotenv import load_dotenv
+
+if TYPE_CHECKING:
+    from whatsupdoc.vertex_rag_client import VertexRAGClient
 
 # Load environment variables
 load_dotenv()
 
 
 @pytest.fixture
-def required_env_vars():
+def required_env_vars() -> list[str]:
     """Required environment variables for RAG Engine tests."""
-    return ['PROJECT_ID', 'LOCATION', 'RAG_CORPUS_ID']
+    return ["PROJECT_ID", "LOCATION", "RAG_CORPUS_ID"]
 
 
 @pytest.fixture
-def rag_config(required_env_vars):
+def rag_config(required_env_vars: list[str]) -> dict[str, str]:
     """RAG Engine configuration from environment variables."""
     config = {}
     missing_vars = []
@@ -38,7 +42,7 @@ def rag_config(required_env_vars):
 
 @pytest.mark.integration
 @pytest.mark.requires_gcp
-def test_required_env_variables(required_env_vars):
+def test_required_env_variables(required_env_vars: list[str]) -> None:
     """Test that all required RAG Engine environment variables are set."""
     missing_vars = []
 
@@ -55,21 +59,22 @@ def test_required_env_variables(required_env_vars):
         assert value, f"{var} should not be empty"
         assert len(value) > 0, f"{var} should have content"
 
+
 @pytest.fixture
-def rag_client(rag_config):
+def rag_client(rag_config: dict[str, str]) -> "VertexRAGClient":
     """Create a RAG client for testing."""
     from whatsupdoc.vertex_rag_client import VertexRAGClient
 
     return VertexRAGClient(
-        project_id=rag_config['project_id'],
-        location=rag_config['location'],
-        rag_corpus_id=rag_config['rag_corpus_id']
+        project_id=rag_config["project_id"],
+        location=rag_config["location"],
+        rag_corpus_id=rag_config["rag_corpus_id"],
     )
 
 
 @pytest.mark.integration
 @pytest.mark.requires_gcp
-def test_rag_engine_connection(rag_client):
+def test_rag_engine_connection(rag_client: "VertexRAGClient") -> None:
     """Test connection to Vertex AI RAG Engine."""
     # Test that we can establish a connection
     connection_result = rag_client.test_connection()
@@ -78,7 +83,7 @@ def test_rag_engine_connection(rag_client):
 
 @pytest.mark.integration
 @pytest.mark.requires_gcp
-def test_get_corpus_info(rag_client):
+def test_get_corpus_info(rag_client: "VertexRAGClient") -> None:
     """Test getting corpus information."""
     # Should be able to get corpus info without error
     info = rag_client.get_corpus_info()
@@ -87,14 +92,14 @@ def test_get_corpus_info(rag_client):
     assert isinstance(info, dict), "Corpus info should be a dictionary"
 
     # Check for expected fields
-    if 'name' in info:
-        assert isinstance(info['name'], str), "Corpus name should be a string"
-        assert len(info['name']) > 0, "Corpus name should not be empty"
+    if "name" in info:
+        assert isinstance(info["name"], str), "Corpus name should be a string"
+        assert len(info["name"]) > 0, "Corpus name should not be empty"
 
 
 @pytest.mark.integration
 @pytest.mark.requires_gcp
-def test_list_rag_files(rag_client):
+def test_list_rag_files(rag_client: "VertexRAGClient") -> None:
     """Test listing files in the RAG corpus."""
     files = rag_client.list_rag_files()
 
@@ -106,10 +111,11 @@ def test_list_rag_files(rag_client):
         for file_info in files[:3]:  # Check first 3 files
             assert isinstance(file_info, dict), "Each file should be a dictionary"
 
+
 @pytest.mark.integration
 @pytest.mark.requires_gcp
 @pytest.mark.asyncio
-async def test_rag_search(rag_client):
+async def test_rag_search(rag_client: "VertexRAGClient") -> None:
     """Test RAG search functionality."""
     test_query = "What are the main topics in the documents?"
 
@@ -126,9 +132,9 @@ async def test_rag_search(rag_client):
 
         for result in results:
             # Check required attributes exist
-            assert hasattr(result, 'title'), "Result should have a title"
-            assert hasattr(result, 'confidence_score'), "Result should have a confidence score"
-            assert hasattr(result, 'snippet'), "Result should have a snippet"
+            assert hasattr(result, "title"), "Result should have a title"
+            assert hasattr(result, "confidence_score"), "Result should have a confidence score"
+            assert hasattr(result, "snippet"), "Result should have a snippet"
 
             # Check data types
             assert isinstance(result.title, str), "Title should be a string"
@@ -142,14 +148,21 @@ async def test_rag_search(rag_client):
 
 @pytest.mark.integration
 @pytest.mark.requires_gcp
-@pytest.mark.parametrize("query,expected_min_results", [
-    ("test query", 0),  # May return 0 results for generic queries
-    ("main topics", 0),  # May return 0 results
-])
+@pytest.mark.parametrize(
+    "query,expected_min_results",
+    [
+        ("test query", 0),  # May return 0 results for generic queries
+        ("main topics", 0),  # May return 0 results
+    ],
+)
 @pytest.mark.asyncio
-async def test_rag_search_parametrized(rag_client, query, expected_min_results):
+async def test_rag_search_parametrized(
+    rag_client: "VertexRAGClient", query: str, expected_min_results: int
+) -> None:
     """Test RAG search with different queries."""
     results = await rag_client.search(query, max_results=5)
 
     assert isinstance(results, list), f"Results for query '{query}' should be a list"
-    assert len(results) >= expected_min_results, f"Should have at least {expected_min_results} results for '{query}'"
+    assert (
+        len(results) >= expected_min_results
+    ), f"Should have at least {expected_min_results} results for '{query}'"

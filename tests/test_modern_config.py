@@ -8,7 +8,7 @@ import pytest
 
 
 @pytest.mark.unit
-def test_modern_config_validation():
+def test_modern_config_validation() -> None:
     """Test modern config validation with Pydantic."""
     from whatsupdoc.config import Config
 
@@ -32,7 +32,7 @@ def test_modern_config_validation():
 
 
 @pytest.mark.unit
-def test_modern_config_socket_mode():
+def test_modern_config_socket_mode() -> None:
     """Test config validation for Socket Mode."""
     from pydantic import ValidationError
 
@@ -67,7 +67,7 @@ def test_modern_config_socket_mode():
 
 
 @pytest.mark.unit
-def test_modern_config_field_validation():
+def test_modern_config_field_validation() -> None:
     """Test field validation and constraints."""
     from pydantic import ValidationError
 
@@ -94,7 +94,7 @@ def test_modern_config_field_validation():
 
 
 @pytest.mark.unit
-def test_modern_config_defaults():
+def test_modern_config_defaults() -> None:
     """Test default values."""
     from whatsupdoc.config import Config
 
@@ -113,13 +113,13 @@ def test_modern_config_defaults():
 
         # Test defaults
         assert config.location == "us-central1"
-        assert config.use_grounded_generation == True
+        assert config.use_grounded_generation is True
         assert config.response_timeout == 30
         assert config.bot_name == "whatsupdoc"
         assert config.rate_limit_per_user == 10
         assert config.rate_limit_window == 60
         assert config.gemini_model == "gemini-2.5-flash-lite"
-        assert config.use_vertex_ai == True
-        assert config.enable_rag_generation == True
+        assert config.use_vertex_ai is True
+        assert config.enable_rag_generation is True
         assert config.max_context_length == 100000
         assert config.answer_temperature == 0.1
