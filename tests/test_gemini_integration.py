@@ -1,5 +1,4 @@
-"""Test Gemini RAG integration functionality.
-"""
+"""Test Gemini RAG integration functionality."""
 
 import pytest
 from dotenv import load_dotenv
@@ -28,9 +27,7 @@ def search_client(config):
     from whatsupdoc.vertex_rag_client import VertexRAGClient
 
     client = VertexRAGClient(
-        project_id=config.project_id,
-        location=config.location,
-        rag_corpus_id=config.rag_corpus_id
+        project_id=config.project_id, location=config.location, rag_corpus_id=config.rag_corpus_id
     )
 
     if not client.test_connection():
@@ -49,7 +46,7 @@ def gemini_service(config):
         location=config.location,
         model=config.gemini_model,
         use_vertex_ai=config.use_vertex_ai,
-        temperature=config.answer_temperature
+        temperature=config.answer_temperature,
     )
 
     if not service.test_connection():
@@ -63,10 +60,10 @@ def gemini_service(config):
 def test_config_validation(config):
     """Test that configuration is valid."""
     assert config is not None, "Configuration should be created"
-    assert hasattr(config, 'gemini_model'), "Should have gemini_model"
-    assert hasattr(config, 'use_vertex_ai'), "Should have use_vertex_ai"
-    assert hasattr(config, 'answer_temperature'), "Should have answer_temperature"
-    assert hasattr(config, 'max_context_length'), "Should have max_context_length"
+    assert hasattr(config, "gemini_model"), "Should have gemini_model"
+    assert hasattr(config, "use_vertex_ai"), "Should have use_vertex_ai"
+    assert hasattr(config, "answer_temperature"), "Should have answer_temperature"
+    assert hasattr(config, "max_context_length"), "Should have max_context_length"
 
     # Check reasonable values
     assert 0 <= config.answer_temperature <= 1, "Temperature should be between 0 and 1"
@@ -80,7 +77,7 @@ def test_search_client_connection(search_client):
     assert search_client is not None, "Search client should be created"
 
     # Connection test already passed in fixture
-    assert hasattr(search_client, 'test_connection'), "Should have test_connection method"
+    assert hasattr(search_client, "test_connection"), "Should have test_connection method"
 
 
 @pytest.mark.integration
@@ -90,7 +87,7 @@ def test_gemini_service_connection(gemini_service):
     assert gemini_service is not None, "Gemini service should be created"
 
     # Connection test already passed in fixture
-    assert hasattr(gemini_service, 'test_connection'), "Should have test_connection method"
+    assert hasattr(gemini_service, "test_connection"), "Should have test_connection method"
 
 
 @pytest.mark.integration
@@ -101,9 +98,7 @@ async def test_search_functionality(search_client):
     test_query = "What are the main topics in the documents?"
 
     results = await search_client.search(
-        query=test_query,
-        max_results=3,
-        use_grounded_generation=True
+        query=test_query, max_results=3, use_grounded_generation=True
     )
 
     assert isinstance(results, list), "Results should be a list"
@@ -113,9 +108,9 @@ async def test_search_functionality(search_client):
     # If we have results, check their structure
     if results:
         for result in results:
-            assert hasattr(result, 'title'), "Result should have title"
-            assert hasattr(result, 'snippet'), "Result should have snippet"
-            assert hasattr(result, 'confidence_score'), "Result should have confidence score"
+            assert hasattr(result, "title"), "Result should have title"
+            assert hasattr(result, "snippet"), "Result should have snippet"
+            assert hasattr(result, "confidence_score"), "Result should have confidence score"
 
 
 @pytest.mark.integration
@@ -124,13 +119,7 @@ async def test_search_functionality(search_client):
 async def test_full_rag_pipeline(search_client, gemini_service, config):
     """Test the complete RAG pipeline integration."""
     # Try multiple queries to increase chance of finding results
-    test_queries = [
-        "policy",
-        "documentation",
-        "information",
-        "process",
-        "management"
-    ]
+    test_queries = ["policy", "documentation", "information", "process", "management"]
 
     results = None
     test_query = None
@@ -139,9 +128,7 @@ async def test_full_rag_pipeline(search_client, gemini_service, config):
     for query in test_queries:
         test_query = query
         results = await search_client.search(
-            query=query,
-            max_results=3,
-            use_grounded_generation=True
+            query=query, max_results=3, use_grounded_generation=True
         )
         if results:
             break
@@ -153,17 +140,15 @@ async def test_full_rag_pipeline(search_client, gemini_service, config):
 
     # Step 2: Generate RAG answer
     rag_response = await gemini_service.generate_answer(
-        query=test_query,
-        search_results=results,
-        max_context_length=config.max_context_length
+        query=test_query, search_results=results, max_context_length=config.max_context_length
     )
 
     # Verify response structure
     assert rag_response is not None, "RAG response should not be None"
-    assert hasattr(rag_response, 'answer'), "Response should have answer"
-    assert hasattr(rag_response, 'confidence_score'), "Response should have confidence score"
-    assert hasattr(rag_response, 'sources'), "Response should have sources"
-    assert hasattr(rag_response, 'has_citations'), "Response should have has_citations flag"
+    assert hasattr(rag_response, "answer"), "Response should have answer"
+    assert hasattr(rag_response, "confidence_score"), "Response should have confidence score"
+    assert hasattr(rag_response, "sources"), "Response should have sources"
+    assert hasattr(rag_response, "has_citations"), "Response should have has_citations flag"
 
     # Verify response content
     assert isinstance(rag_response.answer, str), "Answer should be a string"
@@ -176,27 +161,17 @@ async def test_full_rag_pipeline(search_client, gemini_service, config):
 
 @pytest.mark.integration
 @pytest.mark.requires_gcp
-@pytest.mark.parametrize("query", [
-    "policy",
-    "process",
-    "information"
-])
+@pytest.mark.parametrize("query", ["policy", "process", "information"])
 @pytest.mark.asyncio
 async def test_rag_pipeline_multiple_queries(search_client, gemini_service, config, query):
     """Test RAG pipeline with different types of queries."""
-    results = await search_client.search(
-        query=query,
-        max_results=2,
-        use_grounded_generation=True
-    )
+    results = await search_client.search(query=query, max_results=2, use_grounded_generation=True)
 
     if not results:
         pytest.skip(f"No search results found for query: '{query}'")
 
     rag_response = await gemini_service.generate_answer(
-        query=query,
-        search_results=results,
-        max_context_length=config.max_context_length
+        query=query, search_results=results, max_context_length=config.max_context_length
     )
 
     assert rag_response is not None, f"Should generate response for query: '{query}'"

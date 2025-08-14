@@ -18,9 +18,7 @@ class Config(BaseSettings):
     # Slack Settings
     slack_bot_token: str = Field(..., description="Slack Bot Token")
     slack_signing_secret: str = Field(..., description="Slack Signing Secret")
-    slack_app_token: str | None = Field(
-        default=None, description="Slack App Token for Socket Mode"
-    )
+    slack_app_token: str | None = Field(default=None, description="Slack App Token for Socket Mode")
 
     # Feature Configuration
     use_grounded_generation: bool = Field(default=True)
@@ -43,7 +41,7 @@ class Config(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
-        extra="ignore"  # Ignore extra environment variables
+        extra="ignore",  # Ignore extra environment variables
     )
 
     @field_validator("slack_app_token", mode="before")
@@ -54,7 +52,9 @@ class Config(BaseSettings):
             raise ValueError("SLACK_APP_TOKEN required for Socket Mode")
         return v
 
-    @field_validator("project_id", "rag_corpus_id", "slack_bot_token", "slack_signing_secret", mode="before")
+    @field_validator(
+        "project_id", "rag_corpus_id", "slack_bot_token", "slack_signing_secret", mode="before"
+    )
     @classmethod
     def validate_required_fields(cls, v):
         if not v or not v.strip():

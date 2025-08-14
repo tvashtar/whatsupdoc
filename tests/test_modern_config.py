@@ -13,13 +13,17 @@ def test_modern_config_validation():
     from whatsupdoc.config import Config
 
     # Test with valid configuration (clear environment first)
-    with patch.dict(os.environ, {
-        "PROJECT_ID": "test-project",
-        "RAG_CORPUS_ID": "test-corpus",
-        "SLACK_BOT_TOKEN": "xoxb-test",
-        "SLACK_SIGNING_SECRET": "test-secret",
-        "PORT": "8080"  # Cloud Run mode, no app token needed
-    }, clear=True):
+    with patch.dict(
+        os.environ,
+        {
+            "PROJECT_ID": "test-project",
+            "RAG_CORPUS_ID": "test-corpus",
+            "SLACK_BOT_TOKEN": "xoxb-test",
+            "SLACK_SIGNING_SECRET": "test-secret",
+            "PORT": "8080",  # Cloud Run mode, no app token needed
+        },
+        clear=True,
+    ):
         config = Config()
         assert config.project_id == "test-project"
         assert config.rag_corpus_id == "test-corpus"
@@ -36,18 +40,22 @@ def test_modern_config_socket_mode():
 
     # Test that Pydantic validator catches missing app token in Socket Mode
     # Set up environment without PORT (Socket Mode) and without SLACK_APP_TOKEN
-    with patch.dict(os.environ, {
-        "PROJECT_ID": "test-project",
-        "RAG_CORPUS_ID": "test-corpus",
-        "SLACK_BOT_TOKEN": "xoxb-test",
-        "SLACK_SIGNING_SECRET": "test-secret"
-        # Explicitly exclude PORT and SLACK_APP_TOKEN to trigger Socket Mode validation
-    }, clear=True):
+    with patch.dict(
+        os.environ,
+        {
+            "PROJECT_ID": "test-project",
+            "RAG_CORPUS_ID": "test-corpus",
+            "SLACK_BOT_TOKEN": "xoxb-test",
+            "SLACK_SIGNING_SECRET": "test-secret",
+            # Explicitly exclude PORT and SLACK_APP_TOKEN to trigger Socket Mode validation
+        },
+        clear=True,
+    ):
         # Create a custom config class that skips .env file loading for this test
         class TestConfig(Config):
             model_config = {
                 **Config.model_config,
-                "env_file": None  # Disable .env file loading
+                "env_file": None,  # Disable .env file loading
             }
 
         # Should raise ValidationError during creation due to missing SLACK_APP_TOKEN
@@ -65,15 +73,18 @@ def test_modern_config_field_validation():
 
     from whatsupdoc.config import Config
 
-    with patch.dict(os.environ, {
-        "PROJECT_ID": "test-project",
-        "RAG_CORPUS_ID": "test-corpus",
-        "SLACK_BOT_TOKEN": "xoxb-test",
-        "SLACK_SIGNING_SECRET": "test-secret",
-        "PORT": "8080",
-        "MAX_RESULTS": "25",  # Above max limit of 20
-        "ANSWER_TEMPERATURE": "3.0"  # Above max limit of 2.0
-    }):
+    with patch.dict(
+        os.environ,
+        {
+            "PROJECT_ID": "test-project",
+            "RAG_CORPUS_ID": "test-corpus",
+            "SLACK_BOT_TOKEN": "xoxb-test",
+            "SLACK_SIGNING_SECRET": "test-secret",
+            "PORT": "8080",
+            "MAX_RESULTS": "25",  # Above max limit of 20
+            "ANSWER_TEMPERATURE": "3.0",  # Above max limit of 2.0
+        },
+    ):
         with pytest.raises(ValidationError) as exc_info:
             Config()
 
@@ -87,13 +98,17 @@ def test_modern_config_defaults():
     """Test default values."""
     from whatsupdoc.config import Config
 
-    with patch.dict(os.environ, {
-        "PROJECT_ID": "test-project",
-        "RAG_CORPUS_ID": "test-corpus",
-        "SLACK_BOT_TOKEN": "xoxb-test",
-        "SLACK_SIGNING_SECRET": "test-secret",
-        "PORT": "8080"
-    }, clear=True):
+    with patch.dict(
+        os.environ,
+        {
+            "PROJECT_ID": "test-project",
+            "RAG_CORPUS_ID": "test-corpus",
+            "SLACK_BOT_TOKEN": "xoxb-test",
+            "SLACK_SIGNING_SECRET": "test-secret",
+            "PORT": "8080",
+        },
+        clear=True,
+    ):
         config = Config()
 
         # Test defaults

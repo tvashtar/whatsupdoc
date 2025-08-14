@@ -17,6 +17,7 @@ def main() -> None:
     print("🚀 Starting whatsupdoc RAG chatbot (modernized)...")
     try:
         from whatsupdoc.slack_bot import SlackBot
+
         bot = SlackBot()
         bot.start()
     except KeyboardInterrupt:
@@ -24,6 +25,7 @@ def main() -> None:
     except Exception as e:
         print(f"💥 Bot startup failed: {e}")
         import traceback
+
         traceback.print_exc()
 
         # Try to provide helpful error messages

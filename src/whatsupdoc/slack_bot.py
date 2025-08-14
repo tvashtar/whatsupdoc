@@ -96,23 +96,17 @@ class SlackBot:
 
         # Rate limiting check
         if not await self._check_rate_limit_async(user_id):
-            respond_func({
-                "text": "⚠️ Rate limit exceeded. Please wait before trying again."
-            })
+            respond_func({"text": "⚠️ Rate limit exceeded. Please wait before trying again."})
             return
 
         # Clean and validate query
         clean_query = self._clean_query(query_text)
         if not clean_query or len(clean_query.strip()) < 3:
-            respond_func({
-                "text": "Please provide a valid research question."
-            })
+            respond_func({"text": "Please provide a valid research question."})
             return
 
         # Send loading message
-        loading_response = respond_func({
-            "text": f"🔍 Searching for: `{clean_query}`..."
-        })
+        loading_response = respond_func({"text": f"🔍 Searching for: `{clean_query}`..."})
 
         # Extract timestamp for potential updates (may be None for webhooks)
         loading_ts = self._extract_timestamp(loading_response)
@@ -146,10 +140,12 @@ class SlackBot:
                     )
                 else:
                     # For webhook responses, send a new message instead of updating
-                    respond_func({
-                        "blocks": response_blocks,
-                        "text": f"Generated answer for: {clean_query}",
-                    })
+                    respond_func(
+                        {
+                            "blocks": response_blocks,
+                            "text": f"Generated answer for: {clean_query}",
+                        }
+                    )
             else:
                 # Handle no results case
                 if loading_ts:
@@ -160,9 +156,11 @@ class SlackBot:
                     )
                 else:
                     # For webhook responses, send a new message instead of updating
-                    respond_func({
-                        "text": f"🤔 No relevant documents found for: `{clean_query}`",
-                    })
+                    respond_func(
+                        {
+                            "text": f"🤔 No relevant documents found for: `{clean_query}`",
+                        }
+                    )
 
         except Exception as e:
             error_context = {"query": clean_query, "user_id": user_id}
@@ -176,22 +174,24 @@ class SlackBot:
                 )
             else:
                 # For webhook responses, send a new message instead of updating
-                respond_func({
-                    "text": error_message,
-                })
+                respond_func(
+                    {
+                        "text": error_message,
+                    }
+                )
 
     def _extract_timestamp(self, response: Any) -> str | None:
         """Extract timestamp from different Slack response types.
-        
+
         Args:
             response: Could be WebhookResponse (from respond function in slash commands)
                      or dict (from say function in mentions/DMs)
-        
+
         Returns:
             Timestamp string if available, None otherwise
 
         """
-        if hasattr(response, 'body'):
+        if hasattr(response, "body"):
             # WebhookResponse object - no ts available since it's for initial response
             # For webhooks, we can't update the message since there's no ts
             return None
@@ -286,42 +286,50 @@ class SlackBot:
             # Get top result for snippet
             top_result = rag_response.sources[0]
             top_confidence_emoji = (
-                "🟢" if top_result.confidence_score >= 0.7
-                else "🟡" if top_result.confidence_score >= 0.4
+                "🟢"
+                if top_result.confidence_score >= 0.7
+                else "🟡"
+                if top_result.confidence_score >= 0.4
                 else "🔴"
             )
 
-            blocks.extend([
-                {"type": "divider"},
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": f"📚 *Sources ({len(rag_response.sources)} chunks):*\n" + " • ".join(source_summary[:3]) + ("..." if len(source_summary) > 3 else "")
-                    }
-                },
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": f"*Top Match:* {top_confidence_emoji} {top_result.confidence_score:.0%} relevance\n```{top_result.content[:200]}{'...' if len(top_result.content) > 200 else ''}```",
+            blocks.extend(
+                [
+                    {"type": "divider"},
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": f"📚 *Sources ({len(rag_response.sources)} chunks):*\n"
+                            + " • ".join(source_summary[:3])
+                            + ("..." if len(source_summary) > 3 else ""),
+                        },
                     },
-                },
-            ])
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": f"*Top Match:* {top_confidence_emoji} {top_result.confidence_score:.0%} relevance\n```{top_result.content[:200]}{'...' if len(top_result.content) > 200 else ''}```",
+                        },
+                    },
+                ]
+            )
 
         # Add footer with tips
-        blocks.extend([
-            {"type": "divider"},
-            {
-                "type": "context",
-                "elements": [
-                    {
-                        "type": "mrkdwn",
-                        "text": "💡 *Tip:* This answer was generated from your company documents. For follow-up questions, try asking for more details or clarification on specific points.",
-                    }
-                ],
-            },
-        ])
+        blocks.extend(
+            [
+                {"type": "divider"},
+                {
+                    "type": "context",
+                    "elements": [
+                        {
+                            "type": "mrkdwn",
+                            "text": "💡 *Tip:* This answer was generated from your company documents. For follow-up questions, try asking for more details or clarification on specific points.",
+                        }
+                    ],
+                },
+            ]
+        )
 
         return blocks
 
@@ -343,7 +351,7 @@ class SlackBot:
             return {
                 "status": "running",
                 "service": "whatsupdoc-slack-bot",
-                "version": "modernized"
+                "version": "modernized",
             }, 200
 
         return flask_app
@@ -389,7 +397,9 @@ class SlackBot:
                 services_available.append("Vertex AI RAG")
                 logger.info("Vertex AI RAG Engine: ✅ Connected")
             else:
-                logger.warning("Vertex AI RAG Engine: ⚠️ Not available, will return empty search results")
+                logger.warning(
+                    "Vertex AI RAG Engine: ⚠️ Not available, will return empty search results"
+                )
         except Exception as e:
             logger.warning("Vertex AI RAG Engine: ❌ Connection failed", error=str(e))
 
@@ -403,12 +413,16 @@ class SlackBot:
                     logger.warning("Gemini AI: ⚠️ Not available, disabling answer generation")
                     self.rag_service = None
             except Exception as e:
-                logger.warning("Gemini AI: ❌ Connection failed, disabling answer generation", error=str(e))
+                logger.warning(
+                    "Gemini AI: ❌ Connection failed, disabling answer generation", error=str(e)
+                )
                 self.rag_service = None
 
         # Bot can operate with degraded functionality
         if not services_available:
-            logger.warning("All AI services unavailable - bot will operate with basic functionality")
+            logger.warning(
+                "All AI services unavailable - bot will operate with basic functionality"
+            )
         else:
             logger.info(f"Bot ready with: {', '.join(services_available)}")
 

@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
+
 class SlackWebhookTester:
     def __init__(self, webhook_url: str, signing_secret: str):
         self.webhook_url = webhook_url
@@ -22,14 +23,12 @@ class SlackWebhookTester:
     def _create_signature(self, timestamp: str, body: str) -> str:
         """Create Slack signature for webhook verification."""
         basestring = f"v0:{timestamp}:{body}"
-        signature = hmac.new(
-            self.signing_secret,
-            basestring.encode(),
-            hashlib.sha256
-        ).hexdigest()
+        signature = hmac.new(self.signing_secret, basestring.encode(), hashlib.sha256).hexdigest()
         return f"v0={signature}"
 
-    def _send_webhook(self, payload: dict[str, Any], event_type: str = "slash_command") -> requests.Response:
+    def _send_webhook(
+        self, payload: dict[str, Any], event_type: str = "slash_command"
+    ) -> requests.Response:
         """Send a webhook request with proper Slack headers."""
         if event_type == "slash_command":
             # Slash commands are form-encoded
@@ -53,8 +52,12 @@ class SlackWebhookTester:
         print(f"\n🔗 Sending {event_type} to: {self.webhook_url}")
         print(f"📋 Payload: {body[:200]}{'...' if len(body) > 200 else ''}")
 
-        response = requests.post(self.webhook_url, data=body if event_type == "slash_command" else None,
-                               json=payload if event_type != "slash_command" else None, headers=headers)
+        response = requests.post(
+            self.webhook_url,
+            data=body if event_type == "slash_command" else None,
+            json=payload if event_type != "slash_command" else None,
+            headers=headers,
+        )
 
         print(f"📊 Response: {response.status_code} - {response.reason}")
         if response.text:
@@ -75,7 +78,7 @@ class SlackWebhookTester:
             "command": "/ask",
             "text": query,
             "response_url": "https://hooks.slack.com/commands/1234/5678",
-            "trigger_id": "13345224609.738474920.8088930838d88f008e0"
+            "trigger_id": "13345224609.738474920.8088930838d88f008e0",
         }
 
         return self._send_webhook(payload, "slash_command")
@@ -92,11 +95,11 @@ class SlackWebhookTester:
                 "text": f"<@U0LAN0Z89> {query}",
                 "ts": "1515449522.000016",
                 "channel": "C0LAN2Q65",
-                "event_ts": "1515449522000016"
+                "event_ts": "1515449522000016",
             },
             "type": "event_callback",
             "event_id": "Ev0LAN670R",
-            "event_time": 1515449522000016
+            "event_time": 1515449522000016,
         }
 
         return self._send_webhook(payload, "event")
@@ -113,11 +116,11 @@ class SlackWebhookTester:
                 "user": "U061F7AUR",
                 "text": query,
                 "ts": "1515449522.000016",
-                "channel_type": "im"
+                "channel_type": "im",
             },
             "type": "event_callback",
             "event_id": "Ev0LAN670R",
-            "event_time": 1515449522000016
+            "event_time": 1515449522000016,
         }
 
         return self._send_webhook(payload, "event")
@@ -127,7 +130,7 @@ class SlackWebhookTester:
         payload = {
             "token": "test_verification_token",
             "challenge": "test_challenge_string",
-            "type": "url_verification"
+            "type": "url_verification",
         }
 
         return self._send_webhook(payload, "url_verification")
@@ -142,7 +145,9 @@ class SlackWebhookTester:
         # Test 1: Health check
         print("\n1️⃣ Testing Health Endpoint")
         try:
-            health_response = requests.get(f"{self.webhook_url.replace('/slack/events', '/health')}")
+            health_response = requests.get(
+                f"{self.webhook_url.replace('/slack/events', '/health')}"
+            )
             results["health_check"] = health_response.status_code == 200
             print(f"✅ Health: {health_response.status_code} - {health_response.json()}")
         except Exception as e:
@@ -212,8 +217,14 @@ class SlackWebhookTester:
 
         if passed == total:
             print("🎉 All tests passed! Bot is working correctly.")
-        elif results.get("health_check") and results.get("slash_command") and results.get("url_verification"):
-            print("✅ Core functionality working! Event handler 'failures' are expected with test data.")
+        elif (
+            results.get("health_check")
+            and results.get("slash_command")
+            and results.get("url_verification")
+        ):
+            print(
+                "✅ Core functionality working! Event handler 'failures' are expected with test data."
+            )
             print("💡 The bot correctly processes events but can't post to fake channels.")
             print("🚀 Bot is ready for production with real Slack workspace!")
         else:
@@ -233,6 +244,7 @@ class SlackWebhookTester:
             print("ℹ️  DM events: Expected to fail with test channels (working in production)")
 
         return results
+
 
 def main():
     """Main test runner."""
@@ -265,9 +277,12 @@ def main():
     print("\n" + "📖 USAGE EXAMPLES:")
     print("python test_slack_webhook.py                    # Run full test suite")
     print("python test_slash_command_simple.py            # Test multiple slash commands")
-    print("python -c \"from test_slack_webhook import *; t=SlackWebhookTester('URL', 'SECRET'); t.test_slash_command('your query')\"")
+    print(
+        "python -c \"from test_slack_webhook import *; t=SlackWebhookTester('URL', 'SECRET'); t.test_slash_command('your query')\""
+    )
 
     return results
+
 
 if __name__ == "__main__":
     main()

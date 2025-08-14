@@ -18,7 +18,7 @@ TEST_QUERIES = [
     "How do I submit expenses?",
     "What are the office hours?",
     "Tell me about health benefits",
-    "How do I request vacation?"
+    "How do I request vacation?",
 ]
 
 # Test user/channel IDs (these are fake - safe to commit)

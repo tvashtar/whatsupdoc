@@ -11,6 +11,7 @@ from slack_webhook_tester import SlackWebhookTester
 
 load_dotenv()
 
+
 def test_various_queries():
     """Test various queries to demonstrate functionality."""
     webhook_url = "https://whatsupdoc-slack-bot-530988540591.us-central1.run.app/slack/events"
@@ -27,7 +28,7 @@ def test_various_queries():
         "How do I submit an expense report?",
         "What are the office hours?",
         "Tell me about our health benefits",
-        "How do I request vacation time?"
+        "How do I request vacation time?",
     ]
 
     print("🧪 Testing Multiple Slash Command Queries")
@@ -57,6 +58,7 @@ def test_various_queries():
         print("⚠️ Some queries failed - check logs for details")
 
     return successful == len(test_queries)
+
 
 if __name__ == "__main__":
     test_various_queries()

@@ -74,11 +74,9 @@ class VertexRAGClient:
                     "rag_retrieval_config": {
                         "top_k": max_results,
                         "ranking": {
-                            "rank_service": {
-                                "model_name": "semantic-ranker-default@latest"
-                            }
-                        }
-                    }
+                            "rank_service": {"model_name": "semantic-ranker-default@latest"}
+                        },
+                    },
                 },
             }
 
