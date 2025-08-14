@@ -136,6 +136,20 @@ gcloud projects add-iam-policy-binding PROJECT_ID \
   --member="serviceAccount:PROJECT_NUMBER-compute@developer.gserviceaccount.com" \
   --role="roles/artifactregistry.writer"
 
+# Grant permissions to RAG Bot service account (for semantic ranking and RAG functionality)
+gcloud projects add-iam-policy-binding PROJECT_ID \
+  --member="serviceAccount:rag-bot-sa@PROJECT_ID.iam.gserviceaccount.com" \
+  --role="roles/aiplatform.user"
+
+# Required for semantic reranking (semantic-ranker-default@latest)
+gcloud projects add-iam-policy-binding PROJECT_ID \
+  --member="serviceAccount:rag-bot-sa@PROJECT_ID.iam.gserviceaccount.com" \
+  --role="roles/discoveryengine.viewer"
+
+gcloud projects add-iam-policy-binding PROJECT_ID \
+  --member="serviceAccount:rag-bot-sa@PROJECT_ID.iam.gserviceaccount.com" \
+  --role="roles/storage.objectViewer"
+
 # Enable required APIs
 gcloud services enable cloudbuild.googleapis.com artifactregistry.googleapis.com run.googleapis.com
 
@@ -228,7 +242,7 @@ app_serving_config = f"projects/{project_id}/locations/{location}/collections/de
 
 ### 7. Context Length Optimization
 **Problem**: Context limit of 8,000 characters was preventing all retrieved chunks from being passed to Gemini.
-**Solution**: Increased to 100,000 characters, allowing all 5 chunks (~20k total) to be passed for comprehensive answers.
+**Solution**: Increased to 100,000 characters, allowing all 10 chunks (~46k total) to be passed for comprehensive answers.
 
 ### 8. Model Optimization
 **Problem**: Using older Gemini 2.0 Flash model.
@@ -248,7 +262,7 @@ app_serving_config = f"projects/{project_id}/locations/{location}/collections/de
 **✅ WORKING**: True RAG generation with complete Gemini integration
 **✅ FIXED**: All major issues resolved:
 - ✅ Confidence scoring now uses actual relevance scores (not hardcoded 50%)
-- ✅ All 7 chunks (25k+ characters) passed to Gemini for comprehensive answer quality
+- ✅ All 10 chunks (46k+ characters) passed to Gemini for comprehensive answer quality
 - ✅ Using optimized Gemini 2.5 Flash Lite model
 - ✅ Proper chunk-based retrieval from RAG Engine
 - ✅ Comprehensive error handling and debugging
@@ -269,11 +283,11 @@ app_serving_config = f"projects/{project_id}/locations/{location}/collections/de
   - `.content` = Full chunk content (4,000-5,000 chars) for RAG processing
   - Slack preview = Actual 300-char snippet for UI display
   - Gemini context = Full content for comprehensive answer generation
-- **Enhanced Retrieval**: 7 chunks (vs 5) ensures capture of specific implementation details alongside methodology
+- **Enhanced Retrieval**: 10 chunks (vs 7) with semantic reranking ensures capture of specific implementation details alongside methodology
 - **Better Answers**: Now finds all 6+ specific LLMs mentioned in documents instead of saying "not explicitly mentioned"
 
 #### Performance Metrics Achieved:
-- **Chunk Size**: Average 4,553 characters per chunk (20x larger than old Discovery Engine snippets)
-- **Total Context**: 25,000+ characters passed to Gemini for comprehensive answers
+- **Chunk Size**: Average 4,604 characters (~894 tokens) per chunk (20x larger than old Discovery Engine snippets)
+- **Total Context**: 46,000+ characters (~8,940 tokens) passed to Gemini for comprehensive answers
 - **Retrieval Quality**: 0.754-0.771 relevance scores with proper confidence calculation
 - **Response Accuracy**: Correctly identifies specific model names (GPT-4, Claude, Gemini, etc.) instead of generic responses

@@ -52,7 +52,7 @@ class VertexRAGClient:
     async def search_async(
         self,
         query: str,
-        max_results: int = 7,
+        max_results: int = 10,
         similarity_threshold: float = 0.3,
     ) -> list[SearchResult]:
         """Modern async search using REST API."""
@@ -63,13 +63,23 @@ class VertexRAGClient:
             # Refresh credentials if needed
             self.credentials.refresh(Request())
 
-            # Build request payload (matching the working REST API structure)
+            # Build request payload with semantic reranking
             request_body = {
                 "vertex_rag_store": {
                     "rag_resources": [{"rag_corpus": self.rag_corpus_id}],
                     "vector_distance_threshold": similarity_threshold,
                 },
-                "query": {"text": query, "similarity_top_k": max_results},
+                "query": {
+                    "text": query,
+                    "rag_retrieval_config": {
+                        "top_k": max_results,
+                        "ranking": {
+                            "rank_service": {
+                                "model_name": "semantic-ranker-default@latest"
+                            }
+                        }
+                    }
+                },
             }
 
             # Build API URL
@@ -161,7 +171,7 @@ class VertexRAGClient:
     async def search(
         self,
         query: str,
-        max_results: int = 7,
+        max_results: int = 10,
         vector_distance_threshold: float | None = None,
         vector_similarity_threshold: float | None = None,
         use_grounded_generation: bool = True,  # Keep for compatibility
