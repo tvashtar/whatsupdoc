@@ -12,7 +12,7 @@ from slack_webhook_tester import SlackWebhookTester
 load_dotenv()
 
 
-def test_various_queries():
+def test_various_queries() -> bool:
     """Test various queries to demonstrate functionality."""
     webhook_url = "https://whatsupdoc-slack-bot-530988540591.us-central1.run.app/slack/events"
     signing_secret = os.getenv("SLACK_SIGNING_SECRET")

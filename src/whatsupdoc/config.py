@@ -3,8 +3,8 @@
 
 import os
 
-from pydantic import ConfigDict, Field, field_validator
-from pydantic_settings import BaseSettings
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Config(BaseSettings):
@@ -37,7 +37,7 @@ class Config(BaseSettings):
     max_context_length: int = Field(default=100000, ge=1000, le=1000000)
     answer_temperature: float = Field(default=0.1, ge=0.0, le=2.0)
 
-    model_config = ConfigDict(
+    model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
@@ -46,7 +46,7 @@ class Config(BaseSettings):
 
     @field_validator("slack_app_token", mode="before")
     @classmethod
-    def validate_slack_app_token(cls, v):
+    def validate_slack_app_token(cls, v: str | None) -> str | None:
         """App token required only if not running in Cloud Run."""
         if not os.getenv("PORT") and not v:
             raise ValueError("SLACK_APP_TOKEN required for Socket Mode")
@@ -56,12 +56,13 @@ class Config(BaseSettings):
         "project_id", "rag_corpus_id", "slack_bot_token", "slack_signing_secret", mode="before"
     )
     @classmethod
-    def validate_required_fields(cls, v):
+    def validate_required_fields(cls, v: str | None) -> str:
+        """Validate that required fields are not empty."""
         if not v or not v.strip():
             raise ValueError("This field is required and cannot be empty")
-        return v.strip()
+        return v.strip() if v else ""
 
-    def validate(self) -> list[str]:
+    def validate_config(self) -> list[str]:
         """Additional validation for backwards compatibility."""
         errors = []
 

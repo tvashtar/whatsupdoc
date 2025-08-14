@@ -111,7 +111,7 @@ This implementation uses **Cloud Functions Gen2** (runs on Cloud Run):
 ### Key Code Features
 - **CloudEvents Support**: Uses `cloudevents.http.CloudEvent` for proper event handling
 - **High-Level RAG SDK**: Uses `vertexai.rag.import_files()` for reliable document ingestion
-- **Robust Error Handling**: Comprehensive logging and exception management  
+- **Robust Error Handling**: Comprehensive logging and exception management
 - **File Type Filtering**: Only processes supported document types
 - **Chunking Strategy**: 4000 characters with 200 overlap for optimal retrieval
 - **Automatic Authentication**: Uses service account credentials via Application Default Credentials
@@ -158,7 +158,7 @@ If uploads don't trigger the function:
 
 #### 4. Import/Dependency Errors
 - Use `google-cloud-aiplatform>=1.108.0` for proper RAG Engine support
-- Verify `cloudevents>=1.11.0` is in requirements.txt  
+- Verify `cloudevents>=1.11.0` is in requirements.txt
 - Check that all required APIs are enabled
 - Ensure function uses CloudEvents specification, not legacy events
 
@@ -185,7 +185,7 @@ gcloud functions logs tail auto-ingest-documents --region=us-central1
 
 ## Supported File Types
 - `.pdf` - PDF documents
-- `.txt` - Plain text files  
+- `.txt` - Plain text files
 - `.docx` - Microsoft Word documents
 - `.html` - HTML files
 - `.md` - Markdown files
@@ -193,7 +193,7 @@ gcloud functions logs tail auto-ingest-documents --region=us-central1
 ## Environment Variables
 
 ### Required
-- `PROJECT_ID` - Google Cloud project ID  
+- `PROJECT_ID` - Google Cloud project ID
 - `LOCATION` - Region (default: us-central1)
 - `RAG_CORPUS_ID` - Target RAG corpus ID
 - `GCS_DOCUMENTS_BUCKET` - Source bucket for document uploads

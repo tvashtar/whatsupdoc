@@ -32,6 +32,7 @@ class VertexRAGClient:
     """Modern Vertex AI RAG client using REST API."""
 
     def __init__(self, project_id: str, location: str, rag_corpus_id: str) -> None:
+        """Initialize the Vertex AI RAG client with credentials and API endpoint."""
         self.project_id = project_id
         self.location = location
         self.rag_corpus_id = rag_corpus_id
@@ -49,7 +50,7 @@ class VertexRAGClient:
             corpus=rag_corpus_id,
         )
 
-    async def search_async(
+    async def search_async(  # noqa: C901
         self,
         query: str,
         max_results: int = 10,
@@ -81,7 +82,10 @@ class VertexRAGClient:
             }
 
             # Build API URL
-            url = f"{self.api_endpoint}/v1beta1/projects/{self.project_id}/locations/{self.location}:retrieveContexts"
+            url = (
+                f"{self.api_endpoint}/v1beta1/projects/{self.project_id}/"
+                f"locations/{self.location}:retrieveContexts"
+            )
 
             headers = {
                 "Authorization": f"Bearer {self.credentials.token}",
@@ -93,10 +97,10 @@ class VertexRAGClient:
             # Execute in thread pool to maintain async interface
             loop = asyncio.get_event_loop()
 
-            def sync_request():
+            def sync_request() -> dict[str, Any]:
                 response = requests.post(url, json=request_body, headers=headers, timeout=30)
                 response.raise_for_status()
-                return response.json()
+                return response.json()  # type: ignore[no-any-return]
 
             response_data = await loop.run_in_executor(None, sync_request)
 

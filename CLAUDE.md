@@ -45,7 +45,7 @@ This is a Slack bot that allows employees to query a company knowledge base (100
 
 ## Current Status
 **✅ COMPLETED**: Full-featured Slack RAG bot deployed to production
-**✅ DEPLOYED**: Running on Cloud Run at https://whatsupdoc-slack-bot-530988540591.us-central1.run.app
+**✅ DEPLOYED**: Running on Cloud Run
 **✅ WORKING**: True RAG generation with complete Gemini integration
 **✅ OPTIMIZED**: Auto-scaling with scale-to-zero for cost efficiency
 

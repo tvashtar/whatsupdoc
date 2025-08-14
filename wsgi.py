@@ -4,12 +4,13 @@
 import os
 
 from dotenv import load_dotenv
+from flask import Flask
 
 # Load environment variables
 load_dotenv()
 
 
-def create_app():
+def create_app() -> Flask:
     """Create and configure the Flask app for WSGI deployment."""
     from whatsupdoc.slack_bot import SlackBot
 

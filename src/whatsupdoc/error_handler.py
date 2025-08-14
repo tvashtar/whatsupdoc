@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Modern error handling and retry logic using tenacity."""
 
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from typing import Any, TypeVar
 
 import structlog
@@ -28,7 +28,7 @@ class ModernErrorHandler:
         retry=retry_if_exception_type((ServiceUnavailable, RetryError)),
         reraise=True,
     )
-    async def robust_api_call(func: Callable[..., T], *args: Any, **kwargs: Any) -> T:
+    async def robust_api_call(func: Callable[..., Awaitable[T]], *args: Any, **kwargs: Any) -> T:
         """Robust API call with exponential backoff."""
         try:
             return await func(*args, **kwargs)
