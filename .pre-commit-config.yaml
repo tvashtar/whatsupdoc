@@ -4,9 +4,9 @@ repos:
     hooks:
       - id: ruff
         args: [--fix]
-        files: ^(src/|tests/|wsgi\.py|cloud-functions/).*\.py$
+        files: ^(src/|tests/|scripts/|cloud-functions/).*\.py$
       - id: ruff-format
-        files: ^(src/|tests/|wsgi\.py|cloud-functions/).*\.py$
+        files: ^(src/|tests/|scripts/|cloud-functions/).*\.py$
 
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.13.0
@@ -28,7 +28,7 @@ repos:
           --disable-error-code=call-arg,
           --disable-error-code=no-any-return
         ]
-        files: ^(src/whatsupdoc/|wsgi\.py).*\.py$
+        files: ^(src/whatsupdoc/|scripts/).*\.py$
         # Only run on main source code, not tests (due to missing stubs)
 
   - repo: https://github.com/pre-commit/pre-commit-hooks

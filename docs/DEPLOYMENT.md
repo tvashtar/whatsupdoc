@@ -2,6 +2,18 @@
 
 ## Cloud Run Deployment
 
+### Quick Deploy (Using Script)
+For convenience, you can use the automated deploy script:
+
+```bash
+# Ensure .env file is configured with all required variables
+bash scripts/deploy.sh
+```
+
+The script reads environment variables from `.env` and handles the deployment automatically.
+
+### Manual Deploy (Using gcloud CLI)
+
 ### Prerequisites - Required IAM Permissions
 Before deploying, ensure these IAM roles are granted to the appropriate service accounts:
 
