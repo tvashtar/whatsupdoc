@@ -13,7 +13,10 @@ from dotenv import load_dotenv
 src_path = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(src_path))
 
-from whatsupdoc.web.gradio_interface import create_gradio_interface  # noqa: E402
+from whatsupdoc.web.gradio_interface import (  # noqa: E402
+    create_gradio_interface,
+    get_auth_credentials,
+)
 
 
 def main() -> None:
@@ -31,7 +34,15 @@ def main() -> None:
     # Create and launch Gradio interface
     try:
         interface = create_gradio_interface()
-        interface.launch(server_name="0.0.0.0", server_port=7860, share=False, debug=True)
+        username, password = get_auth_credentials()
+        interface.launch(
+            server_name="0.0.0.0",
+            server_port=7860,
+            share=False,
+            debug=True,
+            auth=(username, password),
+            auth_message="Enter admin credentials to access the RAG testing interface.",
+        )
     except Exception as e:
         print(f"❌ Error starting Gradio interface: {e}")
         sys.exit(1)

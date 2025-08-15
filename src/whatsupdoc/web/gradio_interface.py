@@ -9,11 +9,15 @@ import os
 
 import gradio as gr
 import structlog
+from dotenv import load_dotenv
 
 from whatsupdoc.core.config import Config
 from whatsupdoc.core.gemini_rag import GeminiRAGService
 from whatsupdoc.core.vertex_rag_client import VertexRAGClient
 from whatsupdoc.web.service import WebRAGService
+
+# Load environment variables
+load_dotenv()
 
 logger = structlog.get_logger()
 
@@ -270,7 +274,10 @@ def launch_gradio_interface(
     """Launch the Gradio interface."""
     logger.info("Launching Gradio interface", host=host, port=port, share=share)
 
-    interface = create_authenticated_interface()
+    interface = create_gradio_interface()
+
+    # Get authentication credentials
+    username, password = get_auth_credentials()
 
     interface.launch(
         server_name=host,
@@ -279,6 +286,8 @@ def launch_gradio_interface(
         debug=debug,
         show_error=True,
         quiet=not debug,
+        auth=(username, password),
+        auth_message="Enter admin credentials to access the RAG testing interface.",
     )
 
 
