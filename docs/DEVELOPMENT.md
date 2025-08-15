@@ -114,3 +114,36 @@ The bot supports both development and production modes:
 - `.env` file for local development
 - Environment variables set directly in Cloud Run for production
 - **Type-safe configuration**: All settings validated with Pydantic models
+
+### RAG Search Configuration
+
+#### Distance Threshold Findings
+**Key Discovery**: The Vertex AI RAG API uses `vector_distance_threshold` (not similarity), where:
+- **Distance = 1 - Cosine Similarity** for normalized vectors
+- **Lower distance = Higher similarity** (counter-intuitive parameter naming)
+- **Range**: 0.0 (identical) to 2.0 (opposite vectors)
+
+#### Optimal Threshold Settings
+Through comprehensive testing, we determined:
+- **0.8 (recommended)**: Allows moderate to low similarity matches, works with semantic reranker
+- **0.6**: Works for most queries but may miss some edge cases
+- **0.3**: Too restrictive, misses relevant content for broader queries
+- **< 0.3**: Fails to return chunks even for reasonable queries
+
+#### Why Use a Threshold?
+Despite having a semantic reranker, the threshold serves important purposes:
+1. **Pre-filtering**: Applied BEFORE semantic reranking to reduce candidates
+2. **Performance**: Reduces expensive reranking operations
+3. **Cost optimization**: Semantic reranking has usage costs
+4. **Quality baseline**: Prevents completely irrelevant chunks from being ranked
+
+#### Testing Approach
+Use the comprehensive RAG functionality tests in `tests/e2e/rag_functionality_tester.py`:
+```bash
+uv run python tests/e2e/rag_functionality_tester.py
+```
+This validates:
+- Actual chunk retrieval across threshold ranges
+- Full RAG pipeline (query → chunks → answer generation)
+- End-to-end webhook integration
+- Real functionality vs. just HTTP status codes
