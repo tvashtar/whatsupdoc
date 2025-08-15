@@ -16,7 +16,7 @@ def test_main_package_import() -> None:
 @pytest.mark.unit
 def test_config_module_import() -> None:
     """Test that config module imports and instantiates correctly."""
-    from whatsupdoc.config import Config
+    from whatsupdoc.core.config import Config
 
     # Should be able to instantiate without errors
     config = Config()
@@ -26,7 +26,7 @@ def test_config_module_import() -> None:
 @pytest.mark.unit
 def test_vertex_rag_client_import() -> None:
     """Test that vertex RAG client modules import correctly."""
-    from whatsupdoc.vertex_rag_client import SearchResult, VertexRAGClient
+    from whatsupdoc.core.vertex_rag_client import SearchResult, VertexRAGClient
 
     # Classes should be importable and callable
     assert callable(VertexRAGClient)
@@ -36,7 +36,7 @@ def test_vertex_rag_client_import() -> None:
 @pytest.mark.unit
 def test_gemini_rag_import() -> None:
     """Test that Gemini RAG modules import correctly."""
-    from whatsupdoc.gemini_rag import GeminiRAGService, RAGResponse
+    from whatsupdoc.core.gemini_rag import GeminiRAGService, RAGResponse
 
     # Classes should be importable and callable
     assert callable(GeminiRAGService)
@@ -46,7 +46,7 @@ def test_gemini_rag_import() -> None:
 @pytest.mark.unit
 def test_slack_bot_import() -> None:
     """Test that Slack bot module imports correctly."""
-    from whatsupdoc.slack_bot import SlackBot
+    from whatsupdoc.slack.slack_bot import SlackBot
 
     # Class should be importable and callable
     assert callable(SlackBot)
@@ -55,7 +55,7 @@ def test_slack_bot_import() -> None:
 @pytest.mark.unit
 def test_app_entry_point_import() -> None:
     """Test that app entry point imports correctly."""
-    from whatsupdoc.app import main
+    from whatsupdoc.slack.app import main
 
     # Function should be importable and callable
     assert callable(main)

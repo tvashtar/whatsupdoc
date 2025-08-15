@@ -84,7 +84,7 @@ def test_gcp_authentication(gcp_config: dict[str, str]) -> None:
 @pytest.mark.requires_gcp
 def test_vertex_rag_client_connection(gcp_config: dict[str, str]) -> None:
     """Test connection to Vertex AI RAG Engine."""
-    from whatsupdoc.vertex_rag_client import VertexRAGClient
+    from whatsupdoc.core.vertex_rag_client import VertexRAGClient
 
     # Initialize the client
     client = VertexRAGClient(
@@ -104,7 +104,7 @@ def test_vertex_rag_client_connection(gcp_config: dict[str, str]) -> None:
 @pytest.mark.requires_gcp
 def test_vertex_rag_client_initialization(gcp_config: dict[str, str]) -> None:
     """Test RAG client can be initialized with valid config."""
-    from whatsupdoc.vertex_rag_client import VertexRAGClient
+    from whatsupdoc.core.vertex_rag_client import VertexRAGClient
 
     client = VertexRAGClient(
         project_id=gcp_config["project_id"],

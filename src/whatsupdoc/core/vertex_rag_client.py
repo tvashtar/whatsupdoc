@@ -54,7 +54,7 @@ class VertexRAGClient:
         self,
         query: str,
         max_results: int = 10,
-        similarity_threshold: float = 0.3,
+        distance_threshold: float = 0.8,  # Higher = more permissive (lower similarity)
     ) -> list[SearchResult]:
         """Modern async search using REST API."""
         try:
@@ -68,7 +68,7 @@ class VertexRAGClient:
             request_body = {
                 "vertex_rag_store": {
                     "rag_resources": [{"rag_corpus": self.rag_corpus_id}],
-                    "vector_distance_threshold": similarity_threshold,
+                    "vector_distance_threshold": distance_threshold,
                 },
                 "query": {
                     "text": query,
@@ -180,8 +180,8 @@ class VertexRAGClient:
     ) -> list[SearchResult]:
         """Search wrapper for backwards compatibility."""
         # Note: use_grounded_generation kept for API compatibility but not used
-        similarity_threshold = vector_similarity_threshold or vector_distance_threshold or 0.3
-        return await self.search_async(query, max_results, similarity_threshold)
+        distance_threshold = vector_distance_threshold or vector_similarity_threshold or 0.8
+        return await self.search_async(query, max_results, distance_threshold)
 
     async def test_connection_async(self) -> bool:
         """Test the Vertex AI connection."""

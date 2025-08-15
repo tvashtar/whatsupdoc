@@ -8,7 +8,8 @@ WORKDIR /app
 RUN pip install uv
 
 # Copy dependency files and source structure for package installation
-COPY pyproject.toml uv.lock README.md wsgi.py ./
+COPY pyproject.toml uv.lock README.md ./
+COPY scripts/wsgi.py ./
 COPY src/ ./src/
 
 # Install only production dependencies from lock file

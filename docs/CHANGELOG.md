@@ -12,7 +12,7 @@
 - **Async Pattern Fixes**: Resolved nested lambda issues in `gemini_rag.py` with proper sync wrapper functions
 - **Modern Pydantic**: Migrated from deprecated `BaseSettings.validate()` to `SettingsConfigDict` approach
 - **Smart Ruff Rules**: Added practical ignore rules for style-only checks (imperative mood, docstring formatting)
-- **Optimized Pre-commit**: Targeted file scanning (`src/`, `tests/`, `wsgi.py`, `cloud-functions/`) with practical mypy settings
+- **Optimized Pre-commit**: Targeted file scanning (`src/`, `tests/`, `scripts/`, `cloud-functions/`) with practical mypy settings
 
 ## August 2025 Critical Fixes & Optimizations
 **✅ REGRESSION RESOLVED**: Fixed critical 501 "Operation not implemented" error that broke RAG search

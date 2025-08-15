@@ -10,7 +10,7 @@ import pytest
 @pytest.mark.unit
 def test_modern_config_validation() -> None:
     """Test modern config validation with Pydantic."""
-    from whatsupdoc.config import Config
+    from whatsupdoc.core.config import Config
 
     # Test with valid configuration (clear environment first)
     with patch.dict(
@@ -36,7 +36,7 @@ def test_modern_config_socket_mode() -> None:
     """Test config validation for Socket Mode."""
     from pydantic import ValidationError
 
-    from whatsupdoc.config import Config
+    from whatsupdoc.core.config import Config
 
     # Test that Pydantic validator catches missing app token in Socket Mode
     # Set up environment without PORT (Socket Mode) and without SLACK_APP_TOKEN
@@ -71,7 +71,7 @@ def test_modern_config_field_validation() -> None:
     """Test field validation and constraints."""
     from pydantic import ValidationError
 
-    from whatsupdoc.config import Config
+    from whatsupdoc.core.config import Config
 
     with patch.dict(
         os.environ,
@@ -96,7 +96,7 @@ def test_modern_config_field_validation() -> None:
 @pytest.mark.unit
 def test_modern_config_defaults() -> None:
     """Test default values."""
-    from whatsupdoc.config import Config
+    from whatsupdoc.core.config import Config
 
     with patch.dict(
         os.environ,
