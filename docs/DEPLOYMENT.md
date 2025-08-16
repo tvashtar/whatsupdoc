@@ -115,7 +115,17 @@ After deployment, configure your Slack app:
 - `--no-cache` prevents bloating final image with unnecessary cache files
 - `--frozen` skips dependency resolution using pre-computed lock file
 
+## Web Interfaces (Development Only)
+
+The project includes additional web interfaces for development and testing:
+
+- **FastAPI REST API**: Not deployed to production (Slack bot only)
+- **Gradio Admin Interface**: For local testing and development only
+- **Local Usage**: See [DEVELOPMENT.md](DEVELOPMENT.md) for local setup instructions
+
+These interfaces share the same RAG core but are intended for local development, testing, and administrative tasks.
+
 ### Current Status
-**✅ DEPLOYED**: Running on Cloud Run
-**✅ WORKING**: True RAG generation with complete Gemini integration
+**✅ DEPLOYED**: Slack bot running on Cloud Run
+**✅ WORKING**: True RAG generation with complete Gemini integration across all interfaces
 **✅ OPTIMIZED**: Auto-scaling with scale-to-zero for cost efficiency

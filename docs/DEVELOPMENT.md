@@ -32,12 +32,12 @@ uv run pre-commit install
 # Run the bot locally
 uv run whatsupdoc
 
-# Web Interface (NEW)
-python scripts/launch_web.py                         # Launch complete web interface (FastAPI + Gradio)
-uv run python src/whatsupdoc/web/app.py              # Gradio admin interface only (port 7860)
-uvicorn whatsupdoc.web.api:app --reload              # FastAPI + Gradio web service (port 8000)
+# Web Interface
+python scripts/launch_web.py                         # Launch FastAPI server (port 8000)
+uv run python src/whatsupdoc/web/app.py              # Gradio admin interface (port 7860)
+uvicorn whatsupdoc.web.api:app --reload              # FastAPI API only (port 8000)
 uv run python tests/web/test_web_interface.py        # Web interface integration tests
-uv run python tests/web/demo_web_interface.py        # Web interface demo
+# Note: FastAPI and Gradio run separately now - no more /admin mounting
 
 # Testing
 uv run pytest                                    # Run all tests

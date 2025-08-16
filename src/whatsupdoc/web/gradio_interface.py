@@ -254,20 +254,6 @@ def get_auth_credentials() -> tuple[str, str]:
     return username, password
 
 
-def create_authenticated_interface() -> gr.Blocks:
-    """Create Gradio interface with authentication."""
-    interface = create_gradio_interface()
-
-    # Get authentication credentials
-    username, password = get_auth_credentials()
-
-    # Add authentication
-    interface.auth = (username, password)
-    interface.auth_message = "Enter admin credentials to access the RAG testing interface."
-
-    return interface
-
-
 def launch_gradio_interface(
     host: str = "127.0.0.1", port: int = 7860, share: bool = False, debug: bool = False
 ) -> None:

@@ -126,12 +126,12 @@ async def test_web_service() -> bool:
 def test_gradio_interface() -> bool:
     """Test the Gradio interface creation."""
     try:
-        from whatsupdoc.web.gradio_interface import create_authenticated_interface
+        from whatsupdoc.web.gradio_interface import create_gradio_interface
 
         logger.info("Testing Gradio interface creation...")
 
         # Create interface
-        interface = create_authenticated_interface()
+        interface = create_gradio_interface()
 
         logger.info("Gradio interface created successfully")
         logger.info("Interface has authentication:", has_auth=hasattr(interface, "auth"))
@@ -146,12 +146,11 @@ def test_gradio_interface() -> bool:
 def test_fastapi_app() -> bool:
     """Test FastAPI app creation."""
     try:
-        from whatsupdoc.web.api import create_web_app
+        from whatsupdoc.web.api import app
 
         logger.info("Testing FastAPI app creation...")
 
-        # Create app without mounting Gradio to avoid issues
-        app = create_web_app(mount_gradio=False)
+        # Use the global app instance
 
         logger.info("FastAPI app created successfully")
         logger.info("Available routes:")

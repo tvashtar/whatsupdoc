@@ -6,7 +6,8 @@ integrates with the existing RAG components from the core module.
 
 import time
 import uuid
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncGenerator, Awaitable, Callable
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 
 import structlog
@@ -20,7 +21,6 @@ from slowapi.util import get_remote_address
 from whatsupdoc.core.gemini_rag import GeminiRAGService
 from whatsupdoc.core.vertex_rag_client import VertexRAGClient
 from whatsupdoc.web.config import WebConfig
-from whatsupdoc.web.gradio_interface import create_authenticated_interface
 from whatsupdoc.web.models import ChatRequest, ChatResponse, ErrorResponse, HealthResponse
 from whatsupdoc.web.service import WebRAGService
 
@@ -29,43 +29,10 @@ logger = structlog.get_logger()
 # Rate limiter setup
 limiter = Limiter(key_func=get_remote_address)
 
-# FastAPI app instance
-app = FastAPI(
-    title="WhatsUpDoc Web API",
-    description="Web API for RAG-based document question answering",
-    version="0.1.0",
-    docs_url="/api/docs",
-    redoc_url="/api/redoc",
-)
 
-# Add CORS middleware for cross-origin requests
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Will be configured properly during startup
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
-    allow_headers=["*"],
-)
-
-# Add rate limiting
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-
-# Global instances - will be initialized on startup
-web_rag_service: WebRAGService | None = None
-config: WebConfig | None = None
-
-
-async def get_rag_service() -> WebRAGService:
-    """Dependency to get the RAG service instance."""
-    if web_rag_service is None:
-        raise HTTPException(status_code=503, detail="RAG service not initialized")
-    return web_rag_service
-
-
-@app.on_event("startup")
-async def startup_event() -> None:
-    """Initialize services on startup."""
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
+    """Lifespan context manager for startup and shutdown events."""
     global web_rag_service, config
 
     logger.info("Initializing web API services...")
@@ -92,26 +59,51 @@ async def startup_event() -> None:
         # Create unified web service
         web_rag_service = WebRAGService(vertex_client=vertex_client, gemini_service=gemini_service)
 
-        # Mount Gradio interface at /admin
-        try:
-            import gradio as gr
-
-            gradio_interface = create_authenticated_interface()
-
-            # Mount the Gradio app
-            gr.mount_gradio_app(app, gradio_interface, path="/admin")
-
-            logger.info("Gradio interface mounted at /admin")
-
-        except Exception as e:
-            logger.error("Failed to mount Gradio interface", error=str(e))
-            # Continue without Gradio interface
-
         logger.info("Web API services initialized successfully")
 
     except Exception as e:
         logger.error("Failed to initialize web API services", error=str(e))
         raise
+
+    yield
+
+    # Shutdown logic (if needed in the future)
+    logger.info("Shutting down web API services...")
+
+
+# FastAPI app instance with lifespan
+app = FastAPI(
+    title="WhatsUpDoc Web API",
+    description="Web API for RAG-based document question answering",
+    version="0.1.0",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    lifespan=lifespan,
+)
+
+# Add CORS middleware for cross-origin requests
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Will be configured properly during startup
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["*"],
+)
+
+# Add rate limiting
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Global instances - will be initialized on startup
+web_rag_service: WebRAGService | None = None
+config: WebConfig | None = None
+
+
+async def get_rag_service() -> WebRAGService:
+    """Dependency to get the RAG service instance."""
+    if web_rag_service is None:
+        raise HTTPException(status_code=503, detail="RAG service not initialized")
+    return web_rag_service
 
 
 @app.middleware("http")
@@ -232,48 +224,3 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
             error="Internal server error", error_code="INTERNAL_ERROR", request_id=request_id
         ).model_dump(),
     )
-
-
-def configure_cors(app: FastAPI, allowed_origins: list[str] | None = None) -> None:
-    """Configure CORS middleware for the FastAPI app."""
-    if allowed_origins is None:
-        # Default to common development origins
-        allowed_origins = [
-            "http://localhost:3000",
-            "http://localhost:8000",
-            "https://policyisforlovers.com",
-            "https://www.policyisforlovers.com",
-        ]
-
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=allowed_origins,
-        allow_credentials=True,
-        allow_methods=["GET", "POST"],
-        allow_headers=["*"],
-    )
-
-    logger.info("CORS configured", allowed_origins=allowed_origins)
-
-
-def create_web_app(cors_origins: list[str] | None = None, mount_gradio: bool = True) -> FastAPI:
-    """Create and configure the FastAPI web application."""
-    configure_cors(app, cors_origins)
-
-    if mount_gradio:
-        # Mount Gradio interface at /admin
-        try:
-            import gradio as gr
-
-            gradio_interface = create_authenticated_interface()
-
-            # Mount the Gradio app
-            gr.mount_gradio_app(app, gradio_interface, path="/admin")
-
-            logger.info("Gradio interface mounted at /admin")
-
-        except Exception as e:
-            logger.error("Failed to mount Gradio interface", error=str(e))
-            # Continue without Gradio interface
-
-    return app

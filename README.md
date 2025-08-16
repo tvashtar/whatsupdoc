@@ -1,6 +1,6 @@
 # What's Up Doc? 🤖
 
-A production-ready Slack RAG chatbot that allows employees to query your company knowledge base using natural language. Built with Google Cloud's Vertex AI RAG Engine for document retrieval and Gemini for answer generation.
+A production-ready multi-interface RAG system that allows employees to query your company knowledge base using natural language. Features Slack bot, Web API, and admin interfaces. Built with Google Cloud's Vertex AI RAG Engine for document retrieval and Gemini for answer generation.
 
 **Status**: ✅ Deployed and running in production with comprehensive documentation
 
@@ -44,26 +44,50 @@ A production-ready Slack RAG chatbot that allows employees to query your company
 **Components:**
 - **Knowledge Base**: Vertex AI RAG Engine (handles document ingestion, chunking, embedding, and retrieval)
 - **Answer Generation**: Gemini 2.5 Flash Lite for RAG-based response generation
-- **Interface**: Slack bot responding to @mentions, slash commands, and DMs
+- **Interfaces**:
+  - Slack bot responding to @mentions, slash commands, and DMs
+  - FastAPI REST API for programmatic access
+  - Gradio admin interface for testing and management
 - **Auto-Ingest**: Cloud Function for automatic document processing from GCS uploads
 - **Document Storage**: Google Cloud Storage bucket with automatic processing triggers
 - **Hosting**: Google Cloud Run (serverless, auto-scaling, scale-to-zero)
-- **Language**: Python 3.11 with Slack Bolt framework and Flask for HTTP mode
+- **Language**: Python 3.11 with Slack Bolt framework, FastAPI, and Gradio
 
 ## 📋 Features
 
-- 🔍 Natural language search across 1000+ PDF documents
-- 💬 Multiple interaction methods:
-  - @mentions: `@KnowledgeBot what is our PTO policy?`
-  - Slash commands: `/ask what is our remote work policy?`
-- 📚 Rich responses with source attribution and confidence scores
-- ⚡ Responses within 5 seconds
-- 🛡️ Rate limiting and error handling
-- 📊 Conversation context for follow-up questions
-- 🔄 **Auto-document ingestion** from GCS bucket uploads
-- 📁 **Multi-format support** (PDF, DOCX, TXT, HTML, MD)
-- 🎯 **True RAG generation** with 100k+ character context
-- 💰 **Scale-to-zero cost optimization** when idle
+### 🔍 **Core RAG Capabilities**
+- Natural language search across 1000+ PDF documents
+- True RAG generation with 100k+ character context
+- Rich responses with source attribution and confidence scores
+- Responses within 5 seconds
+- Auto-document ingestion from GCS bucket uploads
+- Multi-format support (PDF, DOCX, TXT, HTML, MD)
+
+### 💬 **Multiple Interfaces**
+
+**Slack Bot:**
+- @mentions: `@KnowledgeBot what is our PTO policy?`
+- Slash commands: `/ask what is our remote work policy?`
+- Direct messages for private queries
+- Rich response formatting with Slack blocks
+
+**Web API (FastAPI):**
+- RESTful endpoints (`/api/chat`, `/api/health`)
+- OpenAPI/Swagger documentation at `/api/docs`
+- Rate limiting (10 requests/minute per IP)
+- CORS support for frontend integration
+
+**Gradio Admin Interface:**
+- Web-based testing at `http://localhost:7860`
+- Interactive query testing with adjustable parameters
+- Real-time results display and service health checks
+- Basic authentication for secure access
+
+### 🛡️ **Production Features**
+- Rate limiting and comprehensive error handling
+- Conversation context for follow-up questions
+- Scale-to-zero cost optimization when idle
+- Enterprise-grade security with least privilege
 
 ## 💰 Cost Optimization
 
@@ -71,16 +95,35 @@ A production-ready Slack RAG chatbot that allows employees to query your company
 
 ## 🚀 Quick Start
 
+### Development Setup
 ```bash
-# 1. Setup development environment
-uv sync
-cp .env.example .env  # Edit with your credentials
+# 1. Setup environment
+uv sync                        # Install dependencies
+cp .env.example .env          # Edit with your credentials
+uv run pre-commit install     # Set up code quality checks
 
-# 2. Run locally
-uv run whatsupdoc
-
-# 3. Run tests
+# 2. Run tests
 uv run pytest
+```
+
+### Running Interfaces
+
+#### Slack Bot
+```bash
+uv run whatsupdoc             # Start Slack bot locally
+```
+
+#### Web API (FastAPI)
+```bash
+python scripts/launch_web.py  # Start on port 8000
+# Access docs: http://localhost:8000/api/docs
+```
+
+#### Gradio Admin Interface
+```bash
+uv run python src/whatsupdoc/web/app.py  # Start on port 7860
+# Access interface: http://localhost:7860
+# Credentials: Set GRADIO_ADMIN_USERNAME/GRADIO_ADMIN_PASSWORD in .env
 ```
 
 **For complete setup instructions**, including Google Cloud configuration, Slack app setup, and deployment, see:
@@ -91,7 +134,7 @@ uv run pytest
 
 ## 📚 Usage Examples
 
-Once deployed, your team can interact with the bot in several ways:
+### Slack Bot Interactions
 
 **@Mentions in channels:**
 ```
@@ -104,6 +147,27 @@ Once deployed, your team can interact with the bot in several ways:
 /ask what are the company holidays this year?
 /ask who do I contact for IT support?
 ```
+
+### Web API Usage
+
+**REST API calls:**
+```bash
+# Health check
+curl http://localhost:8000/api/health
+
+# Chat query
+curl -X POST http://localhost:8000/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"query": "What is our PTO policy?"}'
+```
+
+### Gradio Admin Interface
+
+Access the web interface at `http://localhost:7860` to:
+- Test queries interactively
+- Adjust confidence thresholds and result limits
+- Monitor service health and performance
+- View detailed responses with source attribution
 
 
 ## 📚 Documentation
