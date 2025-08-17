@@ -1008,8 +1008,6 @@ function initializeWidget() {
   }
 }
 
-// Make function globally accessible for testing
-window.initializeWidget = initializeWidget;
 
 // Auto-initialize if a div with the ID exists
 if (document.readyState === 'loading') {
