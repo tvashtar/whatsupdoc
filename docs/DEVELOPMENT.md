@@ -39,6 +39,15 @@ uvicorn whatsupdoc.web.api:app --reload              # FastAPI API only (port 80
 uv run python tests/web/test_web_interface.py        # Web interface integration tests
 # Note: FastAPI and Gradio run separately now - no more /admin mounting
 
+# Widget Development
+cd src/whatsupdoc/web/widget
+npm install                                           # Install widget dependencies (one-time)
+npm run dev                                          # Start widget development server (port 3000)
+npm run build                                        # Build widget for production
+npm run watch                                        # Build widget in watch mode
+# Widget is served by FastAPI at: http://localhost:8000/static/widget/whatsupdoc-widget.js
+# Demo page at: http://localhost:8000/static/demo.html
+
 # Testing
 uv run pytest                                    # Run all tests
 uv run tests/test_rag_engine_connection.py      # RAG Engine connection test
@@ -129,10 +138,11 @@ All pytest plugins are valuable and should be kept:
 ## Architecture Notes
 
 ### Multi-Interface Support
-The system now supports three interfaces:
-- **Slack Bot**: Original chat interface for internal use
+The system now supports four interfaces:
+- **Slack Bot**: Original chat interface for internal team use
 - **Web API**: REST endpoints for external integrations (`/api/health`, `/api/chat`)
-- **Admin UI**: Gradio interface for RAG testing and management (`/admin`)
+- **Admin UI**: Gradio interface for RAG testing and management (port 7860)
+- **Embeddable Widget**: JavaScript widget for public website integration (`/static/widget/`)
 
 ### Dual Mode Support
 The bot supports both development and production modes:
@@ -242,8 +252,70 @@ curl -X POST http://localhost:8000/api/chat \
   -d '{"query": "What is our policy?"}'
 ```
 
-### Next Phase: Embeddable Widget
-- JavaScript widget for website integration
-- Shadow DOM for style isolation
-- One-line embedding with `<script>` tag
-- Domain-based security restrictions
+## Widget Development Architecture
+
+### Widget Components (Phase 15 ✅)
+**Built using modern Web Components with Vite build system:**
+
+**1. Source Files** (`src/whatsupdoc/web/widget/`)
+- `src/whatsupdoc-widget.js` - Main widget Web Component with Shadow DOM
+- `package.json` - NPM dependencies (Vite, Terser for minification)
+- `vite.config.js` - Build configuration for UMD output
+- `README.md` - Widget documentation and integration guide
+
+**2. Build Output** (`src/whatsupdoc/web/static/widget/`)
+- `whatsupdoc-widget.js` - Minified UMD build for browser embedding
+- `whatsupdoc-widget.js.map` - Source map for debugging
+
+**3. Demo & Testing** (`src/whatsupdoc/web/static/`)
+- `demo.html` - Complete demonstration page with configuration playground
+- Served by FastAPI at `http://localhost:8000/static/demo.html`
+
+### Widget Architecture Features
+- **Web Components**: Native browser API with custom elements
+- **Shadow DOM**: Complete style isolation from host website
+- **UMD Build**: Universal module definition for maximum browser compatibility
+- **Auto-initialization**: Detects DOM ready state and initializes automatically
+- **Configuration**: Data attributes for theme, position, colors, API URL
+- **Responsive Design**: Mobile-first design with proper viewport handling
+- **Error Handling**: Comprehensive error states and user feedback
+
+### Widget Configuration Options
+```html
+<div id="whatsupdoc-widget"
+     data-api-url="https://your-api.com"
+     data-theme="light"
+     data-position="bottom-right"
+     data-title="Ask Our AI"
+     data-placeholder="How can I help?"
+     data-primary-color="#3B82F6">
+</div>
+<script src="https://your-api.com/static/widget/whatsupdoc-widget.js"></script>
+```
+
+### Widget Security Status
+**⚠️ CURRENT STATE**: No authentication - open to any domain
+- Widget sends `X-Widget-Origin` header (informational only)
+- API accepts requests from any origin (CORS: `*`)
+- Rate limiting: 10 requests/minute per IP
+- **NEXT**: Domain whitelisting and API authentication (Phase 16)
+
+### Build Process
+```bash
+# Development workflow
+cd src/whatsupdoc/web/widget
+npm install                    # One-time setup
+npm run dev                   # Development server with hot reload (port 3000)
+npm run build                 # Production build (outputs to ../static/widget/)
+npm run watch                 # Rebuild on changes
+
+# Testing with Playwright MCP
+# Use browser automation to test widget functionality in real browsers
+# Validates: auto-initialization, FAB clicks, chat functionality, API integration
+```
+
+### Integration Testing
+- **Playwright MCP**: Browser automation for full widget testing
+- **Real Browser Testing**: Validates actual DOM manipulation and user interactions
+- **API Integration**: Tests full chat flow with RAG responses
+- **Cross-browser Compatibility**: Chrome, Firefox, Safari, Edge support

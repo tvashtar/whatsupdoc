@@ -48,6 +48,7 @@ A production-ready multi-interface RAG system that allows employees to query you
   - Slack bot responding to @mentions, slash commands, and DMs
   - FastAPI REST API for programmatic access
   - Gradio admin interface for testing and management
+  - **Embeddable JavaScript widget** for any website (NEW!)
 - **Auto-Ingest**: Cloud Function for automatic document processing from GCS uploads
 - **Document Storage**: Google Cloud Storage bucket with automatic processing triggers
 - **Hosting**: Google Cloud Run (serverless, auto-scaling, scale-to-zero)
@@ -70,6 +71,14 @@ A production-ready multi-interface RAG system that allows employees to query you
 - Slash commands: `/ask what is our remote work policy?`
 - Direct messages for private queries
 - Rich response formatting with Slack blocks
+
+**Embeddable Widget:**
+- Modern JavaScript Web Component with Shadow DOM
+- One-line integration: `<script src="your-domain/static/widget/whatsupdoc-widget.js"></script>`
+- Customizable themes (light/dark), positions, and colors
+- Mobile-responsive with elegant floating chat interface
+- Rate limiting protection and conversation history
+- Works on any website without CSS conflicts
 
 **Web API (FastAPI):**
 - RESTful endpoints (`/api/chat`, `/api/health`)

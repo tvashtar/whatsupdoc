@@ -237,3 +237,17 @@ tests/e2e/config.py
 tests/results/production_*.md
 
 *.code-workspace
+
+# Node.js / npm files
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+.npm
+.yarn-integrity
+
+# Widget build artifacts
+src/whatsupdoc/web/widget/dist/
+src/whatsupdoc/web/widget/node_modules/
+*.tsbuildinfo
