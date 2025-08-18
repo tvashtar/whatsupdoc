@@ -840,8 +840,8 @@ class WhatsUpDocWidget extends HTMLElement {
       body: JSON.stringify({
         query: message,
         conversation_id: this.conversationId,
-        max_results: 5,
-        distance_threshold: 0.8
+        max_results: 5, // TODO still hardcoded
+        distance_threshold: 0.8 // TODO still hardcoded
       })
     });
     
