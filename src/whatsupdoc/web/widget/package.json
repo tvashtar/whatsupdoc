@@ -1,0 +1,32 @@
+{
+  "name": "whatsupdoc-widget",
+  "version": "1.0.0",
+  "description": "Embeddable chat widget for WhatsUpDoc RAG system",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "build:prod": "vite build --mode production",
+    "watch": "vite build --watch",
+    "serve": "vite preview --port 3000"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "terser": "^5.24.0"
+  },
+  "files": [
+    "dist/*",
+    "src/*"
+  ],
+  "keywords": [
+    "widget",
+    "chat",
+    "ai",
+    "rag",
+    "embeddable",
+    "web-components"
+  ],
+  "author": "WhatsUpDoc Team",
+  "license": "MIT"
+}
