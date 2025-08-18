@@ -55,6 +55,7 @@ uv run tests/test_gemini_integration.py         # Gemini integration test
 uv run tests/test_slack_connection.py           # Slack connection test
 uv run tests/run_all_tests.py                   # Run comprehensive test suite
 uv run python tests/web/test_web_interface.py   # Web interface tests
+uv run pytest tests/test_cors_validation.py -v  # CORS and security validation tests
 
 # Code Quality (optional - pre-commit runs automatically)
 uv run ruff check --fix .                       # Lint and fix code
@@ -294,20 +295,63 @@ curl -X POST http://localhost:8000/api/chat \
 ```
 
 ### Widget Security Status
-**⚠️ CURRENT STATE**: No authentication - open to any domain
-- Widget sends `X-Widget-Origin` header (informational only)
-- API accepts requests from any origin (CORS: `*`)
-- Rate limiting: 10 requests/minute per IP
-- **NEXT**: Domain whitelisting and API authentication (Phase 16)
+**✅ PRODUCTION SECURED**: Comprehensive CORS and origin validation implemented
+- **CORS Configuration**: Specific allowlist for `storage.googleapis.com` (no wildcard)
+- **Origin Validation Middleware**: Custom middleware validates specific bucket URLs
+- **Authorized Bucket**: Only `whatsupdoc-widget-static` bucket allowed
+- **Header Validation**: `Referer` header validation for additional security
+- **Rate Limiting**: 10 requests/minute per IP with user feedback
+- **Error Handling**: Comprehensive security error messages and validation
+- **Testing**: Complete CORS validation test suite (`tests/test_cors_validation.py`)
 
 ### Build Process
+
+#### ⚠️ CRITICAL: Widget Build Requirements
+**ALWAYS rebuild the widget after source changes** - the widget uses a compiled build process:
+
+- **Source**: `src/whatsupdoc/web/widget/src/whatsupdoc-widget.js` (human-readable)
+- **Output**: `src/whatsupdoc/web/static/widget/whatsupdoc-widget.js` (minified for browsers)
+
+**Common Issue**: Editing source without rebuilding results in stale builds where changes don't appear in browser.
+
 ```bash
 # Development workflow
 cd src/whatsupdoc/web/widget
 npm install                    # One-time setup
 npm run dev                   # Development server with hot reload (port 3000)
-npm run build                 # Production build (outputs to ../static/widget/)
-npm run watch                 # Rebuild on changes
+npm run build                 # Production build (outputs to ../static/widget/) - REQUIRED after changes
+npm run watch                 # Rebuild automatically on source changes - RECOMMENDED for development
+
+# Verification after changes
+ls -la ../static/widget/       # Check that files were updated with recent timestamps
+```
+
+#### Development Best Practices
+1. **Use Watch Mode**: Run `npm run watch` during development to auto-rebuild on changes
+2. **Verify Builds**: Check file timestamps in `../static/widget/` after making changes
+3. **Test Locally**: Use local test server to verify widget behavior after rebuilds
+4. **Debug Console**: Widget includes console logging - check browser dev tools for debug output
+
+#### Troubleshooting Build Issues
+```bash
+# If widget behavior doesn't match source code:
+cd src/whatsupdoc/web/widget
+npm run build                  # Force rebuild
+ls -la ../static/widget/       # Verify output files are fresh
+
+# Check for build errors:
+npm run build -- --verbose    # Detailed build output
+
+# Clean rebuild:
+rm -rf ../static/widget/*      # Clear old builds
+npm run build                  # Fresh build
+```
+
+#### Build Output Files
+- `whatsupdoc-widget.js` - Minified UMD build (CSS inlined)
+- `whatsupdoc-widget.js.map` - Source maps for debugging (preserves original line numbers)
+
+**Note**: No separate CSS files are generated - all styles are inlined into the JS bundle by Vite.
 
 # Testing with Playwright MCP
 # Use browser automation to test widget functionality in real browsers
@@ -319,3 +363,59 @@ npm run watch                 # Rebuild on changes
 - **Real Browser Testing**: Validates actual DOM manipulation and user interactions
 - **API Integration**: Tests full chat flow with RAG responses
 - **Cross-browser Compatibility**: Chrome, Firefox, Safari, Edge support
+
+## Production Deployment & Security
+
+### Multi-Mode Docker Deployment
+**✅ IMPLEMENTED**: Single container supports both Slack bot and Web API modes
+```bash
+# Environment-based mode switching
+MODE=slack    # For Slack bot deployment (default)
+MODE=web      # For Web API deployment
+
+# Production WSGI entry points
+scripts/wsgi.py       # Slack bot mode
+scripts/wsgi_web.py   # Web API mode with uvicorn workers
+```
+
+### Static Asset Deployment
+**✅ AUTOMATED**: Google Cloud Storage deployment with intelligent caching
+```bash
+# Deploy widget and demo to GCS with proper cache headers
+bash scripts/deploy_static.sh
+
+# What the script does:
+# 1. Auto-detects and builds widget source if needed
+# 2. Uploads to gs://whatsupdoc-widget-static/
+# 3. Sets cache headers: 1 week for JS, 1 hour for HTML
+# 4. Configures public read access
+```
+
+### CORS & Security Validation Testing
+**✅ COMPREHENSIVE**: Full security test suite validates production deployment
+```bash
+# Run all security tests
+uv run pytest tests/test_cors_validation.py -v -s
+
+# Test scenarios covered:
+# ✅ Authorized bucket requests (should succeed)
+# ✅ Unauthorized bucket blocking (403 validation)
+# ✅ Malicious domain protection
+# ✅ Edge cases (case sensitivity, subdomain variations)
+# ✅ Preflight request validation
+# ✅ Health endpoint accessibility
+```
+
+### Production URLs
+**✅ DEPLOYED**: All components running on production infrastructure
+- **Widget CDN**: `https://storage.googleapis.com/whatsupdoc-widget-static/widget/whatsupdoc-widget.js`
+- **Demo Page**: `https://storage.googleapis.com/whatsupdoc-widget-static/demo.html`
+- **Web API**: `https://whatsupdoc-web-api-rtgwumc6ua-uc.a.run.app`
+- **API Documentation**: `https://whatsupdoc-web-api-rtgwumc6ua-uc.a.run.app/api/docs`
+
+### Security Features
+- **Origin Validation**: Custom middleware validates specific GCS bucket URLs
+- **CORS Policy**: Specific allowlist (no wildcard) for `storage.googleapis.com`
+- **Rate Limiting**: 10 requests/minute per IP with progressive feedback
+- **Header Validation**: Referer header validation for enhanced security
+- **Error Handling**: Comprehensive security error messages and logging

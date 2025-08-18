@@ -125,7 +125,75 @@ The project includes additional web interfaces for development and testing:
 
 These interfaces share the same RAG core but are intended for local development, testing, and administrative tasks.
 
+## Static Assets Deployment (Widget & Demo)
+
+### Widget Deployment Script
+**ALWAYS use the deployment script** for widget and static files:
+
+```bash
+# Deploy widget and demo page to Google Cloud Storage
+bash scripts/deploy_static.sh
+```
+
+#### What the Script Does
+1. **Automatic Widget Building**: Detects widget source and runs `npm run build` automatically
+2. **GCS Bucket Management**: Creates and configures bucket for static hosting if needed
+3. **File Upload**: Uploads all static assets with proper cache headers
+4. **Cache Optimization**:
+   - Widget files (`.js`, `.map`): 1 week cache (604800 seconds)
+   - Demo page: 1 hour cache (3600 seconds)
+5. **Public Access**: Configures bucket for public read access
+
+#### Required Environment Variables
+The script reads from `.env`:
+```bash
+PROJECT_ID=your-gcp-project-id
+```
+
+#### Deployment Outputs
+After successful deployment:
+- **Widget URL**: `https://storage.googleapis.com/whatsupdoc-widget-static/widget/whatsupdoc-widget.js`
+- **Demo Page**: `https://storage.googleapis.com/whatsupdoc-widget-static/demo.html`
+- **Bucket**: `gs://whatsupdoc-widget-static/`
+
+#### File Structure in GCS
+```
+whatsupdoc-widget-static/
+├── widget/
+│   ├── whatsupdoc-widget.js      # Minified widget (1 week cache)
+│   └── whatsupdoc-widget.js.map  # Source maps (1 week cache)
+└── demo.html                     # Demo page (1 hour cache)
+```
+
+#### Cache Headers Applied
+- **JavaScript/Maps**: `Cache-Control: public, max-age=604800` (1 week)
+- **HTML**: `Cache-Control: public, max-age=3600` (1 hour)
+
+#### Prerequisites
+1. Google Cloud SDK (`gcloud`) installed and authenticated
+2. Project configured in `.env` file
+3. Bucket creation permissions in GCP project
+
+#### Troubleshooting
+```bash
+# Check bucket contents
+gsutil ls -la gs://whatsupdoc-widget-static/
+
+# Verify cache headers
+gsutil stat gs://whatsupdoc-widget-static/widget/whatsupdoc-widget.js
+
+# Manual bucket cleanup (if needed)
+gsutil rm -r gs://whatsupdoc-widget-static/
+```
+
+### Integration with Web API
+The deployed widget integrates with the web API:
+- **API Endpoint**: Configure `data-api-url` to point to your deployed web API
+- **CORS**: Web API must allow requests from widget hosting domain
+- **Rate Limiting**: API includes 10 requests/minute per IP protection
+
 ### Current Status
 **✅ DEPLOYED**: Slack bot running on Cloud Run
+**✅ DEPLOYED**: Widget and demo page on Google Cloud Storage
 **✅ WORKING**: True RAG generation with complete Gemini integration across all interfaces
 **✅ OPTIMIZED**: Auto-scaling with scale-to-zero for cost efficiency

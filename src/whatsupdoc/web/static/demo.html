@@ -187,8 +187,8 @@
                         Add this single line to your HTML page:
                     </p>
                     <div class="code-block mb-6">
-                        <code id="basic-code">&lt;script src="http://localhost:8000/static/widget/whatsupdoc-widget.js"&gt;&lt;/script&gt;
-&lt;div id="whatsupdoc-widget"&gt;&lt;/div&gt;</code>
+                        <code id="basic-code">&lt;script src="https://storage.googleapis.com/whatsupdoc-widget-static/widget/whatsupdoc-widget.js"&gt;&lt;/script&gt;
+&lt;div id="whatsupdoc-widget" data-api-url="https://whatsupdoc-web-api-rtgwumc6ua-uc.a.run.app"&gt;&lt;/div&gt;</code>
                     </div>
                     <button onclick="copyCode('basic-code')" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
                         Copy Code
@@ -202,9 +202,9 @@
                         Customize the widget with data attributes:
                     </p>
                     <div class="code-block mb-6">
-                        <code id="custom-code">&lt;script src="http://localhost:8000/static/widget/whatsupdoc-widget.js"&gt;&lt;/script&gt;
+                        <code id="custom-code">&lt;script src="https://storage.googleapis.com/whatsupdoc-widget-static/widget/whatsupdoc-widget.js"&gt;&lt;/script&gt;
 &lt;div id="whatsupdoc-widget" 
-     data-api-url="https://your-api.com"
+     data-api-url="https://whatsupdoc-web-api-rtgwumc6ua-uc.a.run.app"
      data-theme="dark"
      data-position="bottom-left"
      data-title="Ask Our AI"
@@ -330,8 +330,9 @@
                 <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
                     <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Generated Code</h3>
                     <div class="code-block" style="background: #1e293b; min-height: 200px;">
-                        <code id="generated-code">&lt;script src="http://localhost:8000/static/widget/whatsupdoc-widget.js"&gt;&lt;/script&gt;
+                        <code id="generated-code">&lt;script src="https://storage.googleapis.com/whatsupdoc-widget-static/widget/whatsupdoc-widget.js"&gt;&lt;/script&gt;
 &lt;div id="whatsupdoc-widget"
+     data-api-url="https://whatsupdoc-web-api-rtgwumc6ua-uc.a.run.app"
      data-theme="light"
      data-position="bottom-right"
      data-title="Ask WhatsUpDoc"
@@ -367,9 +368,9 @@
     </footer>
 
     <!-- Widget Integration -->
-    <script src="http://localhost:8000/static/widget/whatsupdoc-widget.js"></script>
+    <script src="https://storage.googleapis.com/whatsupdoc-widget-static/widget/whatsupdoc-widget.js"></script>
     <div id="whatsupdoc-widget" 
-         data-api-url="http://localhost:8000"
+         data-api-url="https://whatsupdoc-web-api-rtgwumc6ua-uc.a.run.app"
          data-theme="light"
          data-position="bottom-right"
          data-title="Ask WhatsUpDoc"
@@ -442,8 +443,9 @@
             const color = document.getElementById('config-color').value;
             
             // Update generated code
-            const generatedCode = `&lt;script src="http://localhost:8000/static/widget/whatsupdoc-widget.js"&gt;&lt;/script&gt;
+            const generatedCode = `&lt;script src="https://storage.googleapis.com/whatsupdoc-widget-static/widget/whatsupdoc-widget.js"&gt;&lt;/script&gt;
 &lt;div id="whatsupdoc-widget"
+     data-api-url="https://whatsupdoc-web-api-rtgwumc6ua-uc.a.run.app"
      data-theme="${theme}"
      data-position="${position}"
      data-title="${title}"

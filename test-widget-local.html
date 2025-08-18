@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Widget Test</title>
+</head>
+<body>
+    <h1>Testing WhatsUpDoc Widget Locally</h1>
+    <p>This page tests the widget with a local file path.</p>
+    
+    <!-- Load widget from local path -->
+    <script src="src/whatsupdoc/web/static/widget/whatsupdoc-widget.js"></script>
+    
+    <!-- Widget container with explicit data-api-url -->
+    <div id="whatsupdoc-widget" 
+         data-api-url="https://whatsupdoc-web-api-rtgwumc6ua-uc.a.run.app"
+         data-theme="light"
+         data-position="bottom-right"
+         data-title="Ask WhatsUpDoc"
+         data-placeholder="Ask me anything...">
+    </div>
+    
+    <script>
+        // Monitor widget initialization
+        console.log('Page loaded, waiting for widget initialization...');
+        
+        // Check widget status after a short delay
+        setTimeout(() => {
+            const container = document.getElementById('whatsupdoc-widget');
+            const widget = container ? container.querySelector('whatsupdoc-widget') : null;
+            
+            if (widget) {
+                console.log('Widget found! Config:', widget.config);
+            } else {
+                console.error('Widget not found after initialization');
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

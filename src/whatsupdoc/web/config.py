@@ -26,16 +26,13 @@ class WebConfig(BaseSettings):
     max_context_length: int = 100000  # Maximum context for Gemini
 
     # Web interface settings
-    gradio_admin_username: str = "admin"
-    gradio_admin_password: str = "changeme123!"
-    web_cors_origins: str = "*"  # Comma-separated list
+    # CORS needs broad origin for preflight, custom middleware validates specific bucket via referer
+    cors_origins_list: list[str] = [
+        "https://storage.googleapis.com"
+    ]  # Broad origin for CORS preflight
+    allowed_bucket_urls: list[str] = [
+        "https://storage.googleapis.com/whatsupdoc-widget-static"
+    ]  # Specific buckets for validation
 
     # Optional Google Cloud credentials (will use default if not specified)
     google_cloud_credentials_path: str | None = None
-
-    @property
-    def cors_origins_list(self) -> list[str]:
-        """Get CORS origins as a list."""
-        if self.web_cors_origins == "*":
-            return ["*"]
-        return [origin.strip() for origin in self.web_cors_origins.split(",")]
