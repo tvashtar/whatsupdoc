@@ -180,7 +180,13 @@ class VertexRAGClient:
     ) -> list[SearchResult]:
         """Search wrapper for backwards compatibility."""
         # Note: use_grounded_generation kept for API compatibility but not used
-        distance_threshold = vector_distance_threshold or vector_similarity_threshold or 0.8
+        # Use provided threshold or fall back to default from config
+        from whatsupdoc.core.config import Config
+
+        config = Config()
+        distance_threshold = (
+            vector_distance_threshold or vector_similarity_threshold or config.distance_threshold
+        )
         return await self.search_async(query, max_results, distance_threshold)
 
     async def test_connection_async(self) -> bool:

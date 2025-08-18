@@ -125,7 +125,7 @@ The widget communicates with your WhatsUpDoc API via the `/api/chat` endpoint:
   "query": "User's question",
   "conversation_id": "unique-conversation-id",
   "max_results": 5,
-  "confidence_threshold": 0.5
+  "distance_threshold": 0.8
 }
 ```
 

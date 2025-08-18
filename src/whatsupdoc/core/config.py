@@ -36,6 +36,7 @@ class Config(BaseSettings):
     enable_rag_generation: bool = Field(default=True)
     max_context_length: int = Field(default=100000, ge=1000, le=1000000)
     answer_temperature: float = Field(default=0.1, ge=0.0, le=2.0)
+    distance_threshold: float = Field(default=0.8, ge=0.0, le=2.0)
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -841,7 +841,7 @@ class WhatsUpDocWidget extends HTMLElement {
         query: message,
         conversation_id: this.conversationId,
         max_results: 5,
-        confidence_threshold: 0.5
+        distance_threshold: 0.8
       })
     });
     

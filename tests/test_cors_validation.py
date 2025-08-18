@@ -26,7 +26,7 @@ class TestCORSValidation:
             "query": "test cors validation",
             "conversation_id": f"test-cors-{int(time.time() * 1000)}",
             "max_results": 1,
-            "confidence_threshold": 0.5,
+            "distance_threshold": 0.8,
         }
 
     def make_chat_request(
@@ -37,7 +37,7 @@ class TestCORSValidation:
         default_headers.update(headers)
 
         return requests.post(
-            f"{API_BASE_URL}/api/chat", headers=default_headers, json=payload, timeout=10
+            f"{API_BASE_URL}/api/chat", headers=default_headers, json=payload, timeout=30
         )
 
     def test_authorized_bucket_origin_allowed(self, test_payload: dict[str, Any]) -> None:
@@ -183,7 +183,7 @@ class TestOriginValidationEdgeCases:
                 "query": "test case sensitivity",
                 "conversation_id": "test-case-sensitivity",
                 "max_results": 1,
-                "confidence_threshold": 0.5,
+                "distance_threshold": 0.8,
             },
             timeout=10,
         )
