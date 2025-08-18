@@ -40,7 +40,7 @@ class WebRAGService:
         query: str,
         conversation_id: str,
         max_results: int = 10,
-        confidence_threshold: float = 0.5,
+        distance_threshold: float = 0.8,
     ) -> WebRAGResult:
         """Process a user query through the complete RAG pipeline.
 
@@ -48,7 +48,7 @@ class WebRAGService:
             query: The user's question
             conversation_id: Conversation identifier (for future use)
             max_results: Maximum number of search results to use
-            confidence_threshold: Minimum confidence threshold for results
+            distance_threshold: Vector distance threshold for filtering results
 
         Returns:
             WebRAGResult with answer, confidence, sources, and timing
@@ -65,24 +65,20 @@ class WebRAGService:
 
         try:
             # Step 1: Search for relevant documents using Vertex RAG
-            # Use fixed distance threshold that works well (from e2e tests)
+            # Use configurable distance threshold (higher = more permissive)
             search_results = await self.vertex_client.search_async(
                 query=query,
                 max_results=max_results,
-                distance_threshold=0.8,  # Higher = more permissive, proven to work in e2e tests
+                distance_threshold=distance_threshold,
             )
 
-            # Filter results by confidence threshold
-            filtered_results = [
-                result
-                for result in search_results
-                if result.confidence_score >= confidence_threshold
-            ]
+            # Use all results from Vertex AI (no additional filtering needed)
+            filtered_results = search_results
 
             logger.info(
                 "Retrieved search results",
                 total_results=len(search_results),
-                filtered_results=len(filtered_results),
+                distance_threshold=distance_threshold,
                 conversation_id=conversation_id,
             )
 

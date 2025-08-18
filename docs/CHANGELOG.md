@@ -1,5 +1,21 @@
 # Implementation History & Lessons Learned
 
+## August 2025 Distance Threshold Refactor
+**✅ SIMPLIFIED FILTERING**: Eliminated confusing double filtering (distance + confidence) for single distance-based filtering
+**✅ PARAMETER CLEANUP**: Changed `confidence_threshold` → `distance_threshold` across all APIs and interfaces
+**✅ ENVIRONMENT CONFIG**: Added `DISTANCE_THRESHOLD=0.8` environment variable for consistent defaults
+**✅ WIDGET UPDATED**: Built new widget version sending `distance_threshold: 0.8` instead of `confidence_threshold: 0.5`
+**✅ TESTS FIXED**: Resolved async test support and CORS validation timeout issues
+
+### Distance Threshold Improvements Made:
+- **Single Filtering Point**: Removed redundant confidence filtering in WebRAGService, only Vertex AI distance filtering
+- **Clear Terminology**: All APIs now use `distance_threshold` parameter (higher = more permissive)
+- **Configurable Defaults**: `DISTANCE_THRESHOLD=0.8` in .env, used across core config and web config
+- **Widget Rebuild**: Updated source and built new minified widget with correct parameter
+- **Documentation Updates**: Widget README and API examples now show `distance_threshold`
+- **Test Improvements**: Fixed async test wrapper and increased CORS timeout from 10s to 30s
+- **Performance**: Single filtering step improves response times and reduces complexity
+
 ## August 2025 Web Interface Architecture Refactoring
 **✅ CLEAN SEPARATION**: Removed redundant Gradio mounting from FastAPI, implemented clean interface separation
 **✅ AUTHENTICATION FIX**: Fixed broken `create_authenticated_interface()` function, replaced with proper `launch()` auth

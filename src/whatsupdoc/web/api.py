@@ -184,11 +184,17 @@ async def chat_endpoint(
 
     try:
         # Process the query using the unified RAG service
+        # Get config defaults
+        max_results = chat_request.max_results or (app_config.max_results if app_config else 10)
+        distance_threshold = chat_request.distance_threshold or (
+            app_config.distance_threshold if app_config else 0.8
+        )
+
         result = await rag_service.process_query(
             query=chat_request.query,
             conversation_id=conversation_id,
-            max_results=chat_request.max_results or 10,
-            confidence_threshold=chat_request.confidence_threshold or 0.5,
+            max_results=max_results,
+            distance_threshold=distance_threshold,
         )
 
         logger.info(

@@ -58,7 +58,7 @@ def check_environment() -> bool:
     return True
 
 
-async def test_web_service() -> bool:
+def test_web_service() -> bool:
     """Test the web RAG service."""
     try:
         from whatsupdoc.core.config import Config
@@ -91,32 +91,36 @@ async def test_web_service() -> bool:
 
         logger.info("Web service initialized successfully")
 
-        # Test connection
-        connection_ok = await web_service.test_connection()
-        logger.info("Connection test result", connection_ok=connection_ok)
+        # Test connection using asyncio.run for individual async calls
+        async def run_async_tests() -> bool:
+            # Test connection
+            connection_ok = await web_service.test_connection()
+            logger.info("Connection test result", connection_ok=connection_ok)
 
-        if connection_ok:
-            # Test a simple query
-            logger.info("Testing simple query...")
-            result = await web_service.process_query(
-                query="What is the company policy?",
-                conversation_id="test-session",
-                max_results=5,
-                confidence_threshold=0.3,
-            )
+            if connection_ok:
+                # Test a simple query
+                logger.info("Testing simple query...")
+                result = await web_service.process_query(
+                    query="What is the company policy?",
+                    conversation_id="test-session",
+                    max_results=5,
+                    distance_threshold=0.9,
+                )
 
-            logger.info(
-                "Query test completed",
-                answer_length=len(result.answer),
-                confidence=result.confidence,
-                num_sources=len(result.sources),
-                processing_time_ms=result.processing_time_ms,
-            )
+                logger.info(
+                    "Query test completed",
+                    answer_length=len(result.answer),
+                    confidence=result.confidence,
+                    num_sources=len(result.sources),
+                    processing_time_ms=result.processing_time_ms,
+                )
 
-            return True
-        else:
-            logger.warning("Connection test failed, but service is initialized")
-            return True
+                return True
+            else:
+                logger.warning("Connection test failed, but service is initialized")
+                return True
+
+        return asyncio.run(run_async_tests())
 
     except Exception as e:
         logger.error("Web service test failed", error=str(e), exc_info=True)

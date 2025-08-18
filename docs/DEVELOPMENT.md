@@ -171,6 +171,8 @@ Through comprehensive testing, we determined:
 - **0.3**: Too restrictive, misses relevant content for broader queries
 - **< 0.3**: Fails to return chunks even for reasonable queries
 
+**Configuration**: Set via `DISTANCE_THRESHOLD=0.8` environment variable (default: 0.8)
+
 #### Why Use a Threshold?
 Despite having a semantic reranker, the threshold serves important purposes:
 1. **Pre-filtering**: Applied BEFORE semantic reranking to reduce candidates
@@ -188,6 +190,13 @@ This validates:
 - Full RAG pipeline (query → chunks → answer generation)
 - End-to-end webhook integration
 - Real functionality vs. just HTTP status codes
+
+#### Recent Refactor (August 2024)
+**Simplified Filtering Architecture**: Removed confusing double filtering approach:
+- **Before**: Vertex AI distance filtering + additional confidence filtering in WebRAGService
+- **After**: Single distance filtering at Vertex AI level only
+- **API Change**: `confidence_threshold` → `distance_threshold` parameter across all interfaces
+- **Benefits**: Clearer terminology, improved performance, configurable via environment
 
 ## Web Interface Architecture
 
@@ -250,7 +259,11 @@ uv run python tests/web/demo_web_interface.py
 curl http://localhost:8000/api/health
 curl -X POST http://localhost:8000/api/chat \
   -H "Content-Type: application/json" \
-  -d '{"query": "What is our policy?"}'
+  -d '{
+    "query": "What is our policy?",
+    "max_results": 5,
+    "distance_threshold": 0.8
+  }'
 ```
 
 ## Widget Development Architecture

@@ -82,7 +82,7 @@ This is a multi-interface RAG (Retrieval-Augmented Generation) system that allow
    - Natural language query processing
    - Proper chunk-based document retrieval
    - Full document context (not just snippets)
-   - Confidence scoring based on relevance
+   - Distance-based filtering with configurable thresholds
    - Efficient embedding-based search
 
 ### 5. **Embeddable JavaScript Widget**:
@@ -98,7 +98,8 @@ This is a multi-interface RAG (Retrieval-Augmented Generation) system that allow
 ### 6. **Advanced Features**:
    - Query preprocessing and optimization
    - Conversation context tracking
-   - Configurable result limits and confidence thresholds
+   - Configurable result limits and distance thresholds (env: `DISTANCE_THRESHOLD=0.8`)
+   - Single-point filtering at Vertex AI level (no redundant filtering)
    - Unified service layer for all interfaces
    - Comprehensive logging and monitoring
    - Production security with CORS validation and origin verification
@@ -109,6 +110,7 @@ This is a multi-interface RAG (Retrieval-Augmented Generation) system that allow
 **✅ SECURED**: CORS validation, origin verification, and comprehensive security middleware
 **✅ WORKING**: True RAG generation with complete Gemini integration across all interfaces
 **✅ OPTIMIZED**: Auto-scaling with scale-to-zero for cost efficiency
+**✅ REFACTORED**: Simplified single distance threshold filtering (Aug 2024)
 
 ## Quick Start
 

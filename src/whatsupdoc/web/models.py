@@ -17,8 +17,8 @@ class ChatRequest(BaseModel):
     max_results: int | None = Field(
         10, description="Maximum number of results to return", ge=1, le=50
     )
-    confidence_threshold: float | None = Field(
-        0.5, description="Minimum confidence threshold", ge=0.0, le=1.0
+    distance_threshold: float | None = Field(
+        0.8, description="Vector distance threshold for filtering results", ge=0.0, le=2.0
     )
 
 

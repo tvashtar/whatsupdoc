@@ -22,7 +22,8 @@ class WebConfig(BaseSettings):
     answer_temperature: float = 0.1
 
     # RAG pipeline settings (from core config)
-    max_results: int = 7  # Maximum search results
+    max_results: int = 10  # Maximum search results (configurable via MAX_RESULTS env var)
+    distance_threshold: float = 0.8  # Vector distance threshold for filtering results
     max_context_length: int = 100000  # Maximum context for Gemini
 
     # Web interface settings

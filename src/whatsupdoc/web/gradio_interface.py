@@ -58,7 +58,7 @@ def initialize_rag_service() -> WebRAGService:
 
 
 async def process_query_async(
-    query: str, max_results: int = 10, confidence_threshold: float = 0.5
+    query: str, max_results: int = 10, distance_threshold: float = 0.8
 ) -> tuple[str, str, str, str]:
     """Process a query through the RAG pipeline.
 
@@ -76,7 +76,7 @@ async def process_query_async(
             query=query.strip(),
             conversation_id="gradio-session",
             max_results=max_results,
-            confidence_threshold=confidence_threshold,
+            distance_threshold=distance_threshold,
         )
 
         # Format sources as a readable list
@@ -99,15 +99,13 @@ async def process_query_async(
 
 
 def process_query_sync(
-    query: str, max_results: int = 10, confidence_threshold: float = 0.5
+    query: str, max_results: int = 10, distance_threshold: float = 0.8
 ) -> tuple[str, str, str, str]:
     """Synchronous wrapper for the async query processing."""
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
-        return loop.run_until_complete(
-            process_query_async(query, max_results, confidence_threshold)
-        )
+        return loop.run_until_complete(process_query_async(query, max_results, distance_threshold))
     finally:
         loop.close()
 
@@ -186,8 +184,8 @@ def create_gradio_interface() -> gr.Blocks:
                     max_results = gr.Slider(
                         label="Max Results", minimum=1, maximum=20, value=10, step=1
                     )
-                    confidence_threshold = gr.Slider(
-                        label="Confidence Threshold", minimum=0.0, maximum=1.0, value=0.5, step=0.1
+                    distance_threshold = gr.Slider(
+                        label="Distance Threshold", minimum=0.0, maximum=2.0, value=0.8, step=0.1
                     )
 
                 submit_btn = gr.Button("Submit Query", variant="primary")
@@ -226,14 +224,14 @@ def create_gradio_interface() -> gr.Blocks:
 
         submit_btn.click(
             fn=process_query_sync,
-            inputs=[query_input, max_results, confidence_threshold],
+            inputs=[query_input, max_results, distance_threshold],
             outputs=[answer_output, confidence_output, sources_output, processing_time],
         )
 
         # Allow Enter key to submit query
         query_input.submit(
             fn=process_query_sync,
-            inputs=[query_input, max_results, confidence_threshold],
+            inputs=[query_input, max_results, distance_threshold],
             outputs=[answer_output, confidence_output, sources_output, processing_time],
         )
 
