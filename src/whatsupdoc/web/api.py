@@ -23,6 +23,7 @@ from slowapi.util import get_remote_address
 from whatsupdoc.core.gemini_rag import GeminiRAGService
 from whatsupdoc.core.vertex_rag_client import VertexRAGClient
 from whatsupdoc.web.config import WebConfig
+from whatsupdoc.web.middleware import OriginValidationMiddleware
 from whatsupdoc.web.models import ChatRequest, ChatResponse, ErrorResponse, HealthResponse
 from whatsupdoc.web.service import WebRAGService
 
@@ -35,33 +36,35 @@ limiter = Limiter(key_func=get_remote_address)
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     """Lifespan context manager for startup and shutdown events."""
-    global web_rag_service, config
+    global web_rag_service, app_config
 
     logger.info("Initializing web API services...")
 
     try:
-        # Load configuration
-        config = WebConfig()
+        # Load configuration (already loaded globally, but load again for services)
+        app_config = WebConfig()
 
         # Initialize RAG components
         vertex_client = VertexRAGClient(
-            project_id=config.project_id,
-            location=config.location,
-            rag_corpus_id=config.rag_corpus_id,
+            project_id=app_config.project_id,
+            location=app_config.location,
+            rag_corpus_id=app_config.rag_corpus_id,
         )
 
         gemini_service = GeminiRAGService(
-            project_id=config.project_id,
-            location=config.location,
-            model=config.gemini_model,
-            use_vertex_ai=config.use_vertex_ai,
-            temperature=config.answer_temperature,
+            project_id=app_config.project_id,
+            location=app_config.location,
+            model=app_config.gemini_model,
+            use_vertex_ai=app_config.use_vertex_ai,
+            temperature=app_config.answer_temperature,
         )
 
         # Create unified web service
         web_rag_service = WebRAGService(vertex_client=vertex_client, gemini_service=gemini_service)
 
-        logger.info("Web API services initialized successfully")
+        logger.info(
+            "Web API services initialized successfully", cors_origins=app_config.cors_origins_list
+        )
 
     except Exception as e:
         logger.error("Failed to initialize web API services", error=str(e))
@@ -83,12 +86,19 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Add CORS middleware for cross-origin requests
+# Configure CORS and middleware at app creation time
+# Load config to get CORS origins
+config = WebConfig()
+
+# Add origin validation middleware for additional security FIRST (runs last)
+app.add_middleware(OriginValidationMiddleware, allowed_origins=config.allowed_bucket_urls)
+
+# Add CORS middleware for cross-origin requests SECOND (runs first)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Will be configured properly during startup
+    allow_origins=config.cors_origins_list,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -103,7 +113,7 @@ app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
 
 # Global instances - will be initialized on startup
 web_rag_service: WebRAGService | None = None
-config: WebConfig | None = None
+app_config: WebConfig | None = None
 
 
 async def get_rag_service() -> WebRAGService:

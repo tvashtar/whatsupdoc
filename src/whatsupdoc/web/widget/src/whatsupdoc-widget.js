@@ -20,28 +20,88 @@ class WhatsUpDocWidget extends HTMLElement {
     // Create shadow DOM for style isolation
     this.attachShadow({ mode: 'open' });
     
-    // Configuration from data attributes
-    this.config = {
-      apiUrl: this.getAttribute('data-api-url') || window.location.origin,
-      theme: this.getAttribute('data-theme') || 'light',
-      position: this.getAttribute('data-position') || 'bottom-right',
-      title: this.getAttribute('data-title') || 'Ask WhatsUpDoc',
-      placeholder: this.getAttribute('data-placeholder') || 'Ask me anything...',
-      primaryColor: this.getAttribute('data-primary-color') || '#3B82F6'
-    };
-    
     // Widget state
     this.isOpen = false;
     this.isLoading = false;
     this.conversationId = this.generateUUID();
     this.messages = [];
     
-    // Initialize widget
-    this.init();
+    // Config will be loaded in connectedCallback after attributes are set
+    this.config = null;
   }
   
   connectedCallback() {
-    // Widget is added to DOM - event listeners are set up in init()
+    // Widget is added to DOM - load config and initialize
+    this.loadConfig();
+    this.init();
+  }
+  
+  loadConfig() {
+    // Configuration from data attributes - read after element is connected
+    console.log('Loading config for WhatsUpDoc Widget...');
+    console.log('Widget element attributes:', Array.from(this.attributes).map(attr => ({ name: attr.name, value: attr.value })));
+    console.log('data-api-url attribute value:', this.getAttribute('data-api-url'));
+    console.log('window.location.origin:', window.location.origin);
+    
+    // Primary config loading from widget attributes
+    let apiUrl = this.getAttribute('data-api-url');
+    let theme = this.getAttribute('data-theme');
+    let position = this.getAttribute('data-position');
+    let title = this.getAttribute('data-title');
+    let placeholder = this.getAttribute('data-placeholder');
+    let primaryColor = this.getAttribute('data-primary-color');
+    
+    // Fallback: if attributes are missing, try to read from the original container
+    if (!apiUrl) {
+      console.log('Widget missing data-api-url, checking original container...');
+      const container = document.getElementById('whatsupdoc-widget');
+      if (container) {
+        apiUrl = container.getAttribute('data-api-url');
+        theme = theme || container.getAttribute('data-theme');
+        position = position || container.getAttribute('data-position');
+        title = title || container.getAttribute('data-title');
+        placeholder = placeholder || container.getAttribute('data-placeholder');
+        primaryColor = primaryColor || container.getAttribute('data-primary-color');
+        console.log('Fallback data-api-url from container:', apiUrl);
+      }
+    }
+    
+    this.config = {
+      apiUrl: apiUrl || this.getDefaultApiUrl(),
+      theme: theme || 'light',
+      position: position || 'bottom-right',
+      title: title || 'Ask WhatsUpDoc',
+      placeholder: placeholder || 'Ask me anything...',
+      primaryColor: primaryColor || '#3B82F6'
+    };
+    
+    // Additional validation to catch issues
+    if (!this.config.apiUrl) {
+      console.error('CRITICAL ERROR: No API URL configured!');
+      console.error('apiUrl variable:', apiUrl);
+      console.error('getDefaultApiUrl() returned:', this.getDefaultApiUrl());
+      throw new Error('Widget configuration failed: No API URL specified');
+    }
+    
+    console.log('WhatsUpDoc Widget config loaded:', this.config);
+    
+    // Validation: warn if API URL looks wrong
+    if (this.config.apiUrl === window.location.origin && window.location.hostname.includes('storage.googleapis.com')) {
+      console.error('ERROR: Widget is using GCS storage URL as API endpoint. This will not work!');
+      console.error('Expected: A proper API URL like https://your-api.com');
+      console.error('Actual:', this.config.apiUrl);
+      console.error('Please check that data-api-url attribute is set correctly on the widget container.');
+    }
+  }
+  
+  getDefaultApiUrl() {
+    // Intelligent default API URL selection
+    // Never use storage.googleapis.com as an API URL
+    if (window.location.hostname.includes('storage.googleapis.com')) {
+      console.warn('Cannot use storage.googleapis.com as API URL. Please set data-api-url attribute.');
+      return null; // This will cause an error, which is better than a silent failure
+    }
+    return window.location.origin;
   }
   
   disconnectedCallback() {
@@ -773,11 +833,24 @@ class WhatsUpDocWidget extends HTMLElement {
   }
   
   async sendMessage(message) {
-    const response = await fetch(`${this.config.apiUrl}/api/chat`, {
+    // Validate API URL before making request
+    if (!this.config.apiUrl) {
+      throw new Error('No API URL configured. Please set data-api-url attribute.');
+    }
+    
+    if (this.config.apiUrl.includes('storage.googleapis.com')) {
+      throw new Error('Invalid API URL: Cannot use storage.googleapis.com as an API endpoint. Please check your data-api-url configuration.');
+    }
+    
+    const apiEndpoint = `${this.config.apiUrl}/api/chat`;
+    console.log('Sending message to API endpoint:', apiEndpoint);
+    
+    const response = await fetch(apiEndpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-Widget-Origin': window.location.origin,
+        'X-Widget-URL': window.location.href,
         'X-Widget-Version': '1.0.0'
       },
       body: JSON.stringify({
@@ -791,6 +864,16 @@ class WhatsUpDocWidget extends HTMLElement {
     if (!response.ok) {
       const error = new Error(`HTTP ${response.status}`);
       error.status = response.status;
+      
+      // Enhanced error messages for common issues
+      if (response.status === 404) {
+        error.message = `API endpoint not found (404). Check if ${apiEndpoint} is correct.`;
+      } else if (response.status === 403) {
+        error.message = `Access forbidden (403). Check API permissions for ${this.config.apiUrl}`;
+      } else if (response.status === 400) {
+        error.message = `Bad request (400). The API rejected the request to ${apiEndpoint}`;
+      }
+      
       throw error;
     }
     
@@ -941,12 +1024,26 @@ class WhatsUpDocWidget extends HTMLElement {
     const messageElement = document.createElement('div');
     messageElement.className = `message ${type}-message`;
     
+    // Include sources if available in metadata
+    let sourcesHTML = '';
+    if (metadata.sources && metadata.sources.length > 0) {
+      sourcesHTML = `
+        <div class="message-sources">
+          <strong>Sources:</strong>
+          ${metadata.sources.map(source => 
+            `<a href="#" class="source-link">${source}</a>`
+          ).join('')}
+        </div>
+      `;
+    }
+    
     messageElement.innerHTML = `
       <div class="message-avatar">
         ${type === 'user' ? 'U' : 'AI'}
       </div>
       <div class="message-content">
         <p>${this.formatMessage(content)}</p>
+        ${sourcesHTML}
       </div>
     `;
     
@@ -994,16 +1091,34 @@ function initializeWidget() {
   
   if (widgetContainer && !hasWidgetElement) {
     console.log('Initializing WhatsUpDoc widget...');
+    console.log('Container element attributes:', Array.from(widgetContainer.attributes).map(attr => ({ name: attr.name, value: attr.value })));
+    
     const widget = document.createElement('whatsupdoc-widget');
     
-    // Copy data attributes
+    // Copy data attributes with detailed logging
+    const copiedAttrs = [];
     Array.from(widgetContainer.attributes).forEach(attr => {
       if (attr.name.startsWith('data-')) {
         widget.setAttribute(attr.name, attr.value);
+        copiedAttrs.push({ name: attr.name, value: attr.value });
+        console.log(`Copied attribute: ${attr.name} = "${attr.value}"`);
       }
     });
     
-    widgetContainer.appendChild(widget);
+    console.log('Attributes copied to widget:', copiedAttrs);
+    
+    // Ensure attributes are set before adding to DOM
+    // Use a slight delay to ensure the custom element definition is ready
+    setTimeout(() => {
+      widgetContainer.appendChild(widget);
+      console.log('WhatsUpDoc widget added to DOM');
+      
+      // Double-check attributes after DOM insertion
+      setTimeout(() => {
+        console.log('Widget attributes after DOM insertion:', Array.from(widget.attributes).map(attr => ({ name: attr.name, value: attr.value })));
+      }, 10);
+    }, 10);
+    
     console.log('WhatsUpDoc widget initialized successfully');
   }
 }

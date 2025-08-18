@@ -301,13 +301,53 @@ curl -X POST http://localhost:8000/api/chat \
 - **NEXT**: Domain whitelisting and API authentication (Phase 16)
 
 ### Build Process
+
+#### ⚠️ CRITICAL: Widget Build Requirements
+**ALWAYS rebuild the widget after source changes** - the widget uses a compiled build process:
+
+- **Source**: `src/whatsupdoc/web/widget/src/whatsupdoc-widget.js` (human-readable)
+- **Output**: `src/whatsupdoc/web/static/widget/whatsupdoc-widget.js` (minified for browsers)
+
+**Common Issue**: Editing source without rebuilding results in stale builds where changes don't appear in browser.
+
 ```bash
 # Development workflow
 cd src/whatsupdoc/web/widget
 npm install                    # One-time setup
 npm run dev                   # Development server with hot reload (port 3000)
-npm run build                 # Production build (outputs to ../static/widget/)
-npm run watch                 # Rebuild on changes
+npm run build                 # Production build (outputs to ../static/widget/) - REQUIRED after changes
+npm run watch                 # Rebuild automatically on source changes - RECOMMENDED for development
+
+# Verification after changes
+ls -la ../static/widget/       # Check that files were updated with recent timestamps
+```
+
+#### Development Best Practices
+1. **Use Watch Mode**: Run `npm run watch` during development to auto-rebuild on changes
+2. **Verify Builds**: Check file timestamps in `../static/widget/` after making changes
+3. **Test Locally**: Use local test server to verify widget behavior after rebuilds
+4. **Debug Console**: Widget includes console logging - check browser dev tools for debug output
+
+#### Troubleshooting Build Issues
+```bash
+# If widget behavior doesn't match source code:
+cd src/whatsupdoc/web/widget
+npm run build                  # Force rebuild
+ls -la ../static/widget/       # Verify output files are fresh
+
+# Check for build errors:
+npm run build -- --verbose    # Detailed build output
+
+# Clean rebuild:
+rm -rf ../static/widget/*      # Clear old builds
+npm run build                  # Fresh build
+```
+
+#### Build Output Files
+- `whatsupdoc-widget.js` - Minified UMD build (CSS inlined)
+- `whatsupdoc-widget.js.map` - Source maps for debugging (preserves original line numbers)
+
+**Note**: No separate CSS files are generated - all styles are inlined into the JS bundle by Vite.
 
 # Testing with Playwright MCP
 # Use browser automation to test widget functionality in real browsers
