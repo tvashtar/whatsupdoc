@@ -41,6 +41,33 @@ A production-ready multi-interface RAG system that allows employees to query you
                                                └──────────────────┘
 ```
 
+### Widget Integration Architecture
+
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   Website       │    │   Cloud Run      │    │  Google Cloud   │
+│                 │    │                  │    │                 │
+│  Embedded       │───▶│  FastAPI Server  │───▶│  Vertex AI      │
+│  JS Widget      │    │                  │    │  RAG Engine     │
+│                 │    │  • CORS security │    │                 │
+│  • FAB button   │    │  • Rate limiting │    │  • 1000+ PDFs   │
+│  • Chat modal   │    │  • Origin valid. │◀───│  • Chunking     │
+│  • Real-time    │◀───│  • API endpoints │    │  • Embeddings   │
+│  • Mobile resp. │    │                  │    │  • Search       │
+│                 │    │  Python 3.11     │    │                 │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+         ▲                      │    ▲
+         │                      ▼    │
+┌─────────────────┐    ┌──────────────────┐
+│  GCS CDN        │    │     Gemini       │
+│                 │    │  2.5 Flash Lite  │
+│  Widget delivery│    │                  │
+│  • Minified JS  │    │  • RAG synthesis │
+│  • Source maps  │    │  • Answer gen.   │
+│  • Cache headers│    │  • Citations     │
+└─────────────────┘    └──────────────────┘
+```
+
 **Components:**
 - **Knowledge Base**: Vertex AI RAG Engine (handles document ingestion, chunking, embedding, and retrieval)
 - **Answer Generation**: Gemini 2.5 Flash Lite for RAG-based response generation
